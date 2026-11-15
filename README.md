@@ -46,6 +46,7 @@ python3.13 -m venv .venv
 - [Native collector](docs/browser-collector.md): screenshot and guarded-click workflow.
 - [Evaluator](docs/evaluator.md): strict PGN and optional bounded Stockfish analysis.
 - [Paired analysis](docs/paired-analysis.md): family-level comparisons and missing-score coverage.
+- [Study contrasts](docs/study-analysis.md): declared nine-arm comparisons and state-by-legality interaction.
 - [Milestones](docs/milestones.md): acceptance criteria and completion evidence.
 - [Literature](docs/literature.md): primary sources; external findings are not ours.
 - `configs/`: immutable run inputs; `chesslab/`: collection and descriptive stats.
