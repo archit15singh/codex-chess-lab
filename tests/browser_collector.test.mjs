@@ -166,3 +166,44 @@ test('deadline crossing after reservation retains evidence without clicking', as
       && event.payload.stage === 'execution' && event.payload.error.includes('deadline')));
   } finally { Date.now = originalNow; await rm(s.dir,{recursive:true,force:true}); }
 });
+
+
+test('promotion is one logged continuation of the existing intent', async () => {
+  const s = await setup();
+  try {
+    await s.collector.observe({emit:false});
+    await s.collector.move({actionId:'1',move:'d7d8q',from:[1,2],to:[3,4]});
+    s.collector.verify({actionId:'1',outcome:'uncertain',note:'promotion chooser visible'});
+    await s.collector.observe({emit:false});
+    await assert.rejects(s.collector.promote({actionId:'wrong',at:[5,6]}), /matching/);
+    await s.collector.promote({actionId:'1',at:[5,6]});
+    assert.equal(s.collector.pending(), '1');
+    await assert.rejects(s.collector.promote({actionId:'1',at:[5,6]}), /already reserved/);
+    s.collector.verify({actionId:'1',outcome:'executed',note:'promoted piece observed'});
+    const r = JSON.parse(execFileSync(python,['-m','chesslab','--db',s.db,'export','test'],{encoding:'utf8'}));
+    assert.equal(r.events.filter(e => e.kind === 'intent').length, 1);
+    assert.deepEqual(s.calls, [[1,2],[3,4],[5,6]]);
+    assert.equal(r.events.filter(e => e.payload.record_type === 'promotion_click_reservation').length, 1);
+  } finally { await rm(s.dir,{recursive:true,force:true}); }
+});
+
+test('unresolved promotion can halt without pretending the chess move resolved', async () => {
+  const s = await setup();
+  try {
+    await s.collector.observe({emit:false});
+    await s.collector.move({actionId:'1',move:'d7d8q',from:[1,2],to:[3,4]});
+    s.collector.halt({reason:'collection failure',note:'chooser cannot be resolved'});
+    const r = JSON.parse(execFileSync(python,['-m','chesslab','--db',s.db,'export','test'],{encoding:'utf8'}));
+    assert.equal(r.events.filter(e => e.kind === 'terminal').length, 0);
+    const stopped = r.events.find(e => e.payload.record_type === 'harness_stop');
+    assert.equal(stopped.payload.pending_action_id, '1');
+    const restarted = makeCollector({target:s.target,repo,db:s.db,run:'test',python,directory:s.dir});
+    assert.equal(restarted.pending(), '1');
+    await restarted.observe({emit:false});
+    await assert.rejects(restarted.promote({actionId:'1',at:[5,6]}), /stopped/);
+    await assert.rejects(restarted.move({actionId:'2',move:'d7d8q',from:[1,2],to:[3,4]}), /stopped/);
+    assert.throws(() => restarted.verify({actionId:'1',outcome:'executed'}), /stopped/);
+    assert.throws(() => restarted.terminal({result:'win'}), /stopped/);
+    assert.throws(() => restarted.halt({reason:'again'}), /stopped/);
+  } finally { await rm(s.dir,{recursive:true,force:true}); }
+});

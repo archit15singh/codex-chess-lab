@@ -45,6 +45,22 @@ selecting a new move. Public recovery/verification calls are rejected while nati
 execution is in flight. A failed
 click also leaves its reservation pending. Observe again before recovery.
 
+For a visible promotion chooser, use `collector.promote({actionId, at})` to
+continue the same pending UCI intent (for example `d7d8q`). Choose the square of
+the already declared piece from the screenshot. The helper records a durable
+reservation before one click, never repeats the source/destination clicks, and
+requires visual verification afterward. It rejects a second promotion click,
+including after restart. It does not identify the chooser or recommend a piece.
+
+If collection cannot continue, observe and call
+`collector.halt({reason, note})`. This records a harness stop and preserves any
+unresolved action without claiming a chess outcome. A stopped run can be observed
+but cannot accept further moves, promotion input, verification or terminal results.
+Record later platform outcomes or controller recovery in separate follow-up
+evidence or a separate diagnostic run. Analysis rejects a ledger containing both
+a harness stop and a terminal result. This is a collection guard, not protection
+against direct database or CLI misuse.
+
 The next move is rejected while any intent is unresolved, including after runtime
 restart. A persistent exclusive owner file under the database directory blocks
 a second helper for the same run, including across processes. `collector.close()`

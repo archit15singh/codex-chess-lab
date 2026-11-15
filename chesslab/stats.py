@@ -42,7 +42,11 @@ def summarize(runs: list[dict]) -> dict:
         endings = [e['payload']['result'] for e in run['events'] if e['kind'] == 'terminal']
         if len(endings) > 1:
             raise ValueError('multiple terminal events')
-        results.append(endings[0] if endings else 'incomplete')
+        stopped = any(e['kind'] == 'observation' and e['payload'].get('record_type') == 'harness_stop'
+                      for e in run['events'])
+        if stopped and endings:
+            raise ValueError('conflicting harness stop and terminal outcome; separate follow-up records')
+        results.append('aborted' if stopped else endings[0] if endings else 'incomplete')
     completed = sum(r in {'win', 'loss', 'draw'} for r in results)
     score = sum({'win': 1, 'draw': .5}.get(r, 0) for r in results)
     return {'started': len(runs), 'completed': completed,
