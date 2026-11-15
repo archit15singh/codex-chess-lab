@@ -60,6 +60,22 @@ class StudyAnalysisTests(unittest.TestCase):
             static_contrasts(bad, resamples=1)
         self.assertEqual(len(CONTRASTS), 12)
 
+    def test_schedule_reconciliation_rejects_missing_units_and_wrong_family(self):
+        rows = [row('a', 'f1'), row('b', 'f2')]
+        schedule = [{'trial_id': f'{r["unit"]}-{a}', 'item_id': r['unit'],
+                     'family_id': r['family'], 'arm': a} for r in rows for a in ARMS]
+        self.assertTrue(static_contrasts(rows, schedule=schedule, resamples=1)['assignment_reconciled'])
+        for bad in [rows[:1], [row('a', 'f1'), row('b', 'wrong')]]:
+            with self.assertRaisesRegex(ValueError, 'frozen assignment'):
+                static_contrasts(bad, schedule=schedule, resamples=1)
+
+    def test_schedule_duplicate_and_missing_treatment_rejected(self):
+        rows = [row('a', 'f1')]
+        schedule = [{'trial_id': a, 'item_id': 'a', 'family_id': 'f1', 'arm': a} for a in ARMS]
+        for bad in [schedule[:-1], schedule + schedule[:1]]:
+            with self.assertRaises(ValueError):
+                static_contrasts(rows, schedule=bad, resamples=1)
+
 
 if __name__ == '__main__':
     unittest.main()

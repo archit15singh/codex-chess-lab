@@ -1,10 +1,14 @@
 # Static endpoint contrasts
 
-`python -m chesslab.study_analysis INPUT --output NEW_OUTPUT` analyzes one endpoint
+`python -m chesslab.study_analysis INPUT --schedule SCHEDULE --output NEW_OUTPUT` analyzes one endpoint
 matrix. Input has `rows`; every row contains a unique `unit`, a source `family`
-and `values` with exactly A through I. Every assigned item must appear. Reconcile
-against the frozen schedule and complete host/scorer audits before exporting the
-matrix. This statistical program cannot attest that a model followed its treatment.
+and `values` with exactly A through I. The CLI requires the frozen static schedule,
+checks exact item/family membership and unique complete nine-treatment assignments,
+and commits both input hashes. An omitted assigned item is an error. Complete
+host/scorer audits before exporting the matrix: this statistical program cannot
+attest that a model followed its treatment. The pure Python function can omit its
+schedule for mathematical checks; its output explicitly marks that reconciliation
+was not performed.
 
 Use numeric zero for a defined binary failure and null for an unavailable quality
 measurement. Bounds, mates, illegal moves and missing scores must remain separate
