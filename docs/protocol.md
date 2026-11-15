@@ -1,11 +1,14 @@
-# Experimental protocol v0.3
+# Experimental protocol v0.4
 
 Status: prospective design; feasibility is separate from confirmatory evidence.
 Freeze a version and hashes before the pilot. Amendments retain dated reasons.
-Version0.2 addressed independent methodological review. Version0.3 adds an
+Version0.2 addressed independent methodological review. Version0.3 added an
 immutable mechanical runtime and controller-supplied move-start deadlines after
 observed collection/timing failures. Earlier runs retain their frozen records and
 are identified separately in the amendment ledger; changes are not retroactive.
+Version0.4 adds a logged promotion continuation, a sealed harness-stop record
+that preserves unresolved actions, and an explicit controller-preparation budget
+anchor. Promotion and stop handling are mechanical amendments, not chess lessons.
 
 ## Questions and estimands
 
@@ -71,7 +74,8 @@ and conditional on that account history; it does not establish IID opponents.
 Only an independently controlled design can support an independent-game
 uncertainty model; matched positions cannot retroactively calibrate Oscar. No new paid API or recurring jobs without approval.
 Initial limits: one live game at a time, no new move started after a controller-
-supplied deadline20minutes after player task launch (record actual platform
+supplied deadline20minutes after recorded controller preparation immediately
+before player task launch (record both timestamps, preparation overhead, actual platform
 semantics and actual elapsed time), at most200attempted agent moves, two
 recovery observations before marking an interaction failure. An official platform timeout loss is a completed game loss when the UI verifies
 that outcome. A harness wall timeout is an aborted run unless the platform
