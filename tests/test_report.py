@@ -3,7 +3,7 @@ from html.parser import HTMLParser
 import unittest
 from unittest.mock import patch
 
-from chesslab.report import build
+from chesslab.report import build, _comparable_difference
 
 
 class TableReader(HTMLParser):
@@ -41,6 +41,8 @@ def evaluation(rows):
 
 
 def row(ply, best, selected, difference=None, **extra):
+    best = {'lowerbound': False, 'upperbound': False, **best}
+    selected = {'lowerbound': False, 'upperbound': False, **selected}
     return {'ply': ply, 'turn': 'white' if ply % 2 else 'black', 'san': 'fixture',
             'best': best, 'selected': selected, 'cp_loss_raw': difference,
             'bounded_search_inversion': difference < 0 if difference is not None else None,
@@ -48,6 +50,19 @@ def row(ply, best, selected, difference=None, **extra):
 
 
 class ReportTests(unittest.TestCase):
+    def test_legacy_missing_bounds_are_unknown_and_not_plotted(self):
+        legacy = row(1, {'cp': 12}, {'cp': 29}, -17)
+        for side in ('best', 'selected'):
+            del legacy[side]['lowerbound']
+            del legacy[side]['upperbound']
+        self.assertIsNone(_comparable_difference(legacy))
+        reader = TableReader()
+        reader.feed(build(evaluation([legacy]), purpose='feasibility', figures=False))
+        self.assertIn('bound metadata unavailable', reader.rows[0][3])
+        self.assertEqual(reader.rows[0][5], '-17')
+        self.assertIn('missing best bound metadata', reader.rows[0][6])
+        self.assertEqual(reader.rows[0][7], 'unavailable')
+
     def test_scores_keep_bounds_mates_missing_and_inversions_distinct(self):
         source = evaluation([
             row(1, {'cp': 12}, {'cp': 29}, -17),

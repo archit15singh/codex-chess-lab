@@ -13,24 +13,36 @@ def _score_text(score: dict) -> str:
         values.append(f"cp {score['cp']}")
     if score.get('mate') is not None:
         values.append(f"mate {score['mate']}")
-    bounds = [flag for flag in ('lowerbound', 'upperbound') if score.get(flag)]
+    bounds = [flag for flag in ('lowerbound', 'upperbound') if score.get(flag) is True]
+    if any(type(score.get(flag)) is not bool for flag in ('lowerbound', 'upperbound')):
+        bounds.append('bound metadata unavailable')
     return ('; '.join(values) or 'unavailable') + ' (' + (', '.join(bounds) or 'no bound flag') + ')'
 
 
 def _difference_status(row: dict) -> str:
-    if row.get('cp_loss_raw') is not None:
-        return 'finite-search inversion' if row['cp_loss_raw'] < 0 else 'available'
     reasons = []
     for side in ('best', 'selected'):
         score = row[side]
+        if any(type(score.get(flag)) is not bool for flag in ('lowerbound', 'upperbound')):
+            reasons.append(f'missing {side} bound metadata')
         for flag in ('lowerbound', 'upperbound'):
-            if score.get(flag):
+            if score.get(flag) is True:
                 reasons.append(f'{side} {flag}')
         if score.get('mate') is not None:
             reasons.append(f'{side} mate score')
         elif score.get('cp') is None:
             reasons.append(f'missing {side} score')
-    return '; '.join(reasons) or 'difference not reported'
+    if reasons:
+        return '; '.join(reasons)
+    if row.get('cp_loss_raw') is not None:
+        return 'finite-search inversion' if row['cp_loss_raw'] < 0 else 'available'
+    return 'difference not reported'
+
+
+def _comparable_difference(row: dict):
+    if _difference_status(row) not in {'available', 'finite-search inversion'}:
+        return None
+    return row['cp_loss_raw']
 
 
 def build(evaluation: dict, *, purpose: str, figures: bool = True) -> str:
@@ -38,7 +50,7 @@ def build(evaluation: dict, *, purpose: str, figures: bool = True) -> str:
         raise ValueError('explicit experimental purpose required')
     rows = evaluation.get('engine_analysis', {}).get('rows', [])
     chart = ''
-    if rows and figures:
+    if rows and figures and any(_comparable_difference(row) is not None for row in rows):
         import matplotlib
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
@@ -50,7 +62,7 @@ def build(evaluation: dict, *, purpose: str, figures: bool = True) -> str:
             fig, ax = plt.subplots(figsize=(10, 3.8), layout='constrained')
             for side, color in [('white', '#7ce5c2'), ('black', '#ffba83')]:
                 selected = [r for r in rows if r['turn'] == side]
-                values = [r.get('cp_loss_raw') for r in selected]
+                values = [_comparable_difference(r) for r in selected]
                 ax.plot([r['ply'] for r in selected],
                         [v if v is not None else float('nan') for v in values],
                         marker='o', markersize=4, linewidth=1.1, color=color,
@@ -69,7 +81,8 @@ def build(evaluation: dict, *, purpose: str, figures: bool = True) -> str:
     for row in rows:
         cells = [row['ply'], row['turn'], row['san'], _score_text(row['best']),
                  _score_text(row['selected']), row.get('cp_loss_raw'),
-                 _difference_status(row), row.get('bounded_search_inversion')]
+                 _difference_status(row),
+                 (_comparable_difference(row) < 0 if _comparable_difference(row) is not None else None)]
         table_rows.append('<tr>' + ''.join('<td>' + escape('unavailable' if c is None else str(c))
                                            + '</td>' for c in cells) + '</tr>')
     engine = evaluation.get('engine_analysis', {})
@@ -87,11 +100,11 @@ def build(evaluation: dict, *, purpose: str, figures: bool = True) -> str:
                     for k, v in summary.items())
     table = ('<div class="scroll"><table><caption>Recorded post-game scores and bound qualifiers</caption>'
              '<thead><tr><th>Ply</th><th>Side</th><th>Move</th><th>Best reference score</th>'
-             '<th>Selected-move score</th><th>Raw cp difference</th>'
+             '<th>Selected-move score</th><th>Recorded raw cp difference</th>'
              '<th>Difference status</th><th>Search inversion</th></tr></thead><tbody>' + ''.join(table_rows) +
              '</tbody></table></div>') if rows else '<p>No engine measurements available.</p>'
     figure_fallback = ('<p>Figure omitted; the table retains the recorded measurements.</p>'
-                       if rows and not figures else '<p>No engine figure is available.</p>')
+                       if rows and not figures else '<p>No comparable centipawn differences are available for a figure.</p>')
     return '''<!doctype html><html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Codex Chess Research - Evidence notebook</title><style>
@@ -116,7 +129,8 @@ and tool-trace audits are required.</p>
 <figure>''' + (chart or figure_fallback) + '''<figcaption>Reference scores come from two separately reset searches at the same pre-move position and moving-side perspective.
 Finite search may yield negative differences; these are retained as search inversions. Mate distances and bounded or
 missing scores are not converted into centipawns. The table retains each score's bound flags; no bound flag is not
-a guarantee of exact chess value. This plot is not an Elo estimate.</figcaption></figure>
+a guarantee of exact chess value. Missing bound metadata is unknown, and such recorded differences remain
+unqualified table entries excluded from the plot. This plot is not an Elo estimate.</figcaption></figure>
 ''' + table + '''<h2>Remaining research requirements</h2><p>A frozen baseline pilot, controlled ablations, calibrated comparisons,
 held-out reflection tests and full reproducibility checks remain necessary. Adaptive Oscar account history may make games
 dependent. Human validation needs disclosed consenting opponents and authorization. No results are published by generating this local file.</p>

@@ -50,6 +50,18 @@ class MetricsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'move sequence differs'):
             game_metrics(run, evaluation, actor='white')
 
+    def test_legacy_bound_metadata_is_not_assumed_false(self):
+        run, evaluation = fixtures()
+        for score in (evaluation['engine_analysis']['rows'][0]['best'],
+                      evaluation['engine_analysis']['rows'][0]['selected']):
+            del score['lowerbound']
+            del score['upperbound']
+        quality = game_metrics(run, evaluation, actor='white')['quality']
+        self.assertEqual(quality['cp_comparable'], 0)
+        self.assertEqual(quality['cp_unavailable'], {'missing_bound_metadata': 1})
+        self.assertEqual(quality['finite_search_inversions'], 0)
+        self.assertEqual(quality['threshold_counts'], {'100': 0, '200': 0, '300': 0})
+
     def test_mate_bounds_and_inversions_remain_distinct(self):
         run, evaluation = fixtures()
         row = evaluation['engine_analysis']['rows'][0]
