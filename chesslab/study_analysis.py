@@ -5,6 +5,7 @@ endpoints use zero; unavailable quality uses null. This module selects no data,
 answers, lessons, thresholds, or winning endpoint from observed effects.
 """
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -27,11 +28,36 @@ CONTRASTS = {
 }
 
 
-def static_contrasts(rows, *, resamples=20_000, seed=2026111504):
+def reconcile_assignment(rows, schedule):
+    if not isinstance(schedule, list) or not schedule:
+        raise ValueError('expected a nonempty frozen assignment schedule')
+    expected, treatments, trials = {}, {}, set()
+    for row in schedule:
+        if (not isinstance(row, dict) or not {'trial_id', 'item_id', 'family_id', 'arm'} <= row.keys()
+                or any(not isinstance(row[k], str) or not row[k]
+                       for k in ('trial_id', 'item_id', 'family_id', 'arm'))):
+            raise ValueError('invalid assignment identity')
+        item, family, arm = row['item_id'], row['family_id'], row['arm']
+        if row['trial_id'] in trials or arm not in ARMS or arm in treatments.get(item, set()):
+            raise ValueError('duplicate trial/treatment or unknown assigned arm')
+        if item in expected and expected[item] != family:
+            raise ValueError('assigned item changes family')
+        expected[item] = family
+        treatments.setdefault(item, set()).add(arm)
+        trials.add(row['trial_id'])
+    if any(arms != set(ARMS) for arms in treatments.values()):
+        raise ValueError('every assigned item requires all nine treatments')
+    if {r['unit']: r['family'] for r in rows} != expected:
+        raise ValueError('endpoint units/families differ from frozen assignment')
+
+
+def static_contrasts(rows, *, schedule=None, resamples=20_000, seed=2026111504):
     # Validate the full matrix, including unused cells, before projecting pairs.
     # One resample suffices for validation; reported estimates below use the
     # requested full budget. The validator also rejects omitted arm keys.
     coverage = paired_summary(rows, ARMS, resamples=1, seed=seed)
+    if schedule is not None:
+        reconcile_assignment(rows, schedule)
     main, sensitivity = {}, {}
     for name, arms in CONTRASTS.items():
         pair_rows, common_rows = [], []
@@ -53,6 +79,7 @@ def static_contrasts(rows, *, resamples=20_000, seed=2026111504):
     interaction = paired_summary(interaction_rows,
         ['state_without_legality', 'state_with_legality'], resamples=resamples, seed=seed)
     return {'schema_version': 1,
+            'assignment_reconciled': schedule is not None,
             'directions': 'Every pair is treatment minus control; interaction is D-B-C+A. Interpret endpoint units separately.',
             'coverage': {k: coverage[k] for k in ('assigned_units', 'assigned_families',
                 'available_units_by_arm', 'common_units', 'common_families',
@@ -68,9 +95,13 @@ def static_contrasts(rows, *, resamples=20_000, seed=2026111504):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', type=Path, help='JSON containing rows with all nine arm values')
+    parser.add_argument('--schedule', required=True, type=Path, help='frozen static assignment schedule')
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
-    result = static_contrasts(json.loads(args.input.read_text())['rows'])
+    raw, assigned = args.input.read_bytes(), args.schedule.read_bytes()
+    result = static_contrasts(json.loads(raw)['rows'], schedule=json.loads(assigned)['schedule'])
+    result['source_hashes'] = {'endpoint_matrix_sha256': hashlib.sha256(raw).hexdigest(),
+                             'assignment_schedule_sha256': hashlib.sha256(assigned).hexdigest()}
     with args.output.open('x') as stream:
         json.dump(result, stream, indent=2, allow_nan=False)
         stream.write('\n')
