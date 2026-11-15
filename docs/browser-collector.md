@@ -13,12 +13,23 @@ var collector = module.makeCollector({
   target: brave, repo: '/absolute/repo',
   db: '/absolute/repo/evidence/private/runs.sqlite', run: 'unique-run-id',
   python: '/absolute/path/to/python3',
-  directory: '/absolute/repo/evidence/private/unique-run-id'
+  directory: '/absolute/repo/evidence/private/unique-run-id',
+  deadline: '2030-01-01T00:20:00Z', // replace with this run's actual frozen ISO deadline
+  maxAttempts: 200
 });
 // A unique ?revision=<source-sha> import suffix avoids stale host module caches.
 collector.provenance();
 await collector.observe();
 ```
+
+The optional ISO deadline prevents starting a new move at/after that time; the
+attempt cap counts all reserved intents, including rejected choices. An already
+started native sequence and final observation may finish after the deadline.
+Settings are recorded once in an immutable ledger observation before the first
+move. A replacement helper adopts those settings if omitted and rejects attempts
+to change them. Record actual timing; this is not a guarantee of instant task
+preemption. Budget
+errors preserve evidence and require observation/stop, never an automatic retry.
 
 Choose a move visually, then call `collector.move({actionId, move, from, to})`.
 Coordinates refer to the current native screenshot. The helper stores the decision

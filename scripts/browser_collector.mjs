@@ -11,8 +11,12 @@ import { join, resolve, dirname } from 'node:path';
 
 const sourceSha256 = createHash('sha256').update(readFileSync(fileURLToPath(import.meta.url))).digest('hex');
 
-export function makeCollector({ target, repo, db, run, python = 'python3', directory }) {
+export function makeCollector({ target, repo, db, run, python = 'python3', directory, deadline, maxAttempts }) {
   if (!target || !repo || !db || !run || !directory) throw new Error('Missing collector settings');
+  let deadlineMs = null;
+  const checkDeadline = () => {
+    if (deadlineMs !== null && Date.now() >= deadlineMs) throw new Error('Harness deadline reached; observe and stop');
+  };
   const root = resolve(repo);
   const dir = resolve(directory);
   let lastObservation = null;
@@ -52,14 +56,17 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   function append(kind, payload, artifact) {
     command(['append', run, kind, '-', ...(artifact ? ['--artifact', artifact] : [])], payload);
   }
-  function pending() {
+  function runState() {
     let action = null;
+    let attempts = 0;
     for (const event of command(['export', run]).events) {
+      if (event.kind === 'intent') attempts++;
       if (event.kind === 'intent') action = event.payload.action_id;
       if (event.kind === 'verification' && event.payload.outcome !== 'uncertain') action = null;
     }
-    return action;
+    return { pending: action, attempts };
   }
+  function pending() { return runState().pending; }
   async function capture({ emit = true } = {}) {
     assertActive();
     await mkdir(dir, { recursive: true });
@@ -77,7 +84,10 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   }
   async function move({ actionId, move, from, to }) {
     if (inFlight) throw new Error('Execution in flight');
-    if (pending() !== null) throw new Error('Resolve pending action from a new observation first');
+    checkDeadline();
+    const state = runState();
+    if (state.pending !== null) throw new Error('Resolve pending action from a new observation first');
+    if (state.attempts >= maxAttempts) throw new Error('Attempt cap reached; observe and stop');
     if (!lastObservation) throw new Error('Observe and select a move before calling move');
     for (const point of [from, to]) {
       if (!Array.isArray(point) || point.length !== 2 || !point.every(Number.isFinite)) {
@@ -90,12 +100,14 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
       // it does not automatically establish that the position is unchanged.
       const decision = { ...lastObservation };
       const pre = await capture({ emit: false });
+      checkDeadline();
       append('intent', { action_id: actionId, move, from, to,
         decision_screenshot_path: decision.file, decision_observed_at: decision.observed_at,
         before_observed_at: pre.observed_at }, pre.file);
       lastObservation = null;
       append('tool', { capability: 'coordinate_click', action_id: actionId, from, to });
       try {
+        checkDeadline();
         await target.click(from);
         await target.click(to);
         // Mandatory host refresh is discarded, never used as chess information.
@@ -128,7 +140,33 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   function provenance() {
     append('observation', { driver: 'native-cua', mode: 'screenshot-decisions',
       ax_policy: 'post-action mandatory refresh, discarded; no AX piece/state observations',
-      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 2 });
+      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 3, deadline, max_attempts: maxAttempts });
+  }
+  // Persist settings before the first move. Recovery adopts them when omitted
+  // and rejects changed limits, instead of silently resetting local defaults.
+  try {
+    const runRecord = command(['export', run]);
+    if (runRecord.events.some(event => event.kind === 'terminal')) throw new Error('Run already terminal');
+    const records = runRecord.events.filter(event => event.kind === 'observation'
+      && event.payload.record_type === 'collector_budget');
+    if (records.length > 1) throw new Error('Conflicting collector budgets');
+    const saved = records[0]?.payload;
+    if (saved) {
+      if (deadline !== undefined && deadline !== saved.deadline) throw new Error('Frozen deadline mismatch');
+      if (maxAttempts !== undefined && maxAttempts !== saved.max_attempts) throw new Error('Frozen attempt cap mismatch');
+      deadline = saved.deadline;
+      maxAttempts = saved.max_attempts;
+    } else {
+      deadline = deadline ?? null;
+      maxAttempts = maxAttempts ?? 200;
+    }
+    deadlineMs = deadline === null ? null : Date.parse(deadline);
+    if (deadlineMs !== null && !Number.isFinite(deadlineMs)) throw new Error('Invalid deadline');
+    if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 200) throw new Error('Invalid attempt cap');
+    if (!saved) append('observation', { record_type: 'collector_budget', deadline, max_attempts: maxAttempts });
+  } catch (error) {
+    close();
+    throw error;
   }
   return { observe, move, verify, terminal, provenance, pending, close };
 }
