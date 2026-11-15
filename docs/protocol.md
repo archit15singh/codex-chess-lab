@@ -1,9 +1,11 @@
-# Experimental protocol v0.2
+# Experimental protocol v0.3
 
 Status: prospective design; feasibility is separate from confirmatory evidence.
 Freeze a version and hashes before the pilot. Amendments retain dated reasons.
-Version0.2 addresses independent methodological review; an already-started run
-retains its frozen v0.1/driver records and is identified in the amendment ledger.
+Version0.2 addressed independent methodological review. Version0.3 adds an
+immutable mechanical runtime and controller-supplied move-start deadlines after
+observed collection/timing failures. Earlier runs retain their frozen records and
+are identified separately in the amendment ledger; changes are not retroactive.
 
 ## Questions and estimands
 
@@ -68,8 +70,9 @@ for specified full games. This sequential adaptive-account pilot is descriptive
 and conditional on that account history; it does not establish IID opponents.
 Only an independently controlled design can support an independent-game
 uncertainty model; matched positions cannot retroactively calibrate Oscar. No new paid API or recurring jobs without approval.
-Initial limits: one live game at a time, 20 minutes wall time per game (record
-actual platform semantics), at most 200 attempted white/black agent moves, two
+Initial limits: one live game at a time, no new move started after a controller-
+supplied deadline20minutes after player task launch (record actual platform
+semantics and actual elapsed time), at most200attempted agent moves, two
 recovery observations before marking an interaction failure. An official platform timeout loss is a completed game loss when the UI verifies
 that outcome. A harness wall timeout is an aborted run unless the platform
 independently confirms a game outcome. Unresolved execution remains incomplete
@@ -105,6 +108,10 @@ move-level rows are not independent game replicates. Bootstrap seeds and resampl
 counts must be recorded. Estimate relative ratings only against a calibrated
 opponent pool with explicit model assumptions and uncertainty; never equate
 Duolingo rating, engine skill settings, FIDE Elo and benchmark-local ratings.
+The move-start deadline does not preempt an already executing native action or
+final observation. A later platform timeout after a harness stop is a separate
+follow-up outcome, not uninterrupted completed play. Keep software/protocol
+versions as analysis strata when mechanics changed.
 No data means 'not estimated', not zero ability. An inconclusive comparison is a
 valid outcome; a missing experiment is not an inconclusive measured result.
 

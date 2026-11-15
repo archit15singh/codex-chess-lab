@@ -10,6 +10,11 @@ chess validation uses the isolated evaluator dependencies; the baseline collecto
 stays independent of chess libraries. Tests and simulations prove engineering
 behavior, never Codex chess ability.
 
+Before live play, use `python3 -m chesslab.freeze` to snapshot the mechanical
+runtime under the private evidence directory and verify its manifest. Pass that
+snapshot as the collector repo/import path. Keep a live run independent of mutable
+Git checkouts; confirm its owner stopped before replacement.
+
 Freeze configs before a run. Maintain intent -> click -> screenshot -> verification
 records and preserve failures. Include incomplete games in reliability denominators.
 Review full host tool traces; self-reported capabilities are insufficient isolation.
