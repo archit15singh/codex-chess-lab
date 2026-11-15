@@ -30,7 +30,7 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   // A crashed owner stays locked. Recovery requires authoritative termination
   // evidence, not expiry or a guessed timeout; never steal a live owner's lock.
   writeFileSync(ownerPath, JSON.stringify({ token: ownerToken, run,
-    created_at: new Date().toISOString(), pid: process.pid }), { flag: 'wx', mode: 0o600 });
+    created_at: new Date().toISOString() }), { flag: 'wx', mode: 0o600 });
   function assertActive() {
     if (closed) throw new Error('Collector owner closed');
     if (JSON.parse(readFileSync(ownerPath, 'utf8')).token !== ownerToken) {
@@ -140,7 +140,7 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   function provenance() {
     append('observation', { driver: 'native-cua', mode: 'screenshot-decisions',
       ax_policy: 'post-action mandatory refresh, discarded; no AX piece/state observations',
-      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 3, deadline, max_attempts: maxAttempts });
+      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 4, deadline, max_attempts: maxAttempts });
   }
   // Persist settings before the first move. Recovery adopts them when omitted
   // and rejects changed limits, instead of silently resetting local defaults.
