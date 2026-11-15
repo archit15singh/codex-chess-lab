@@ -104,6 +104,21 @@ class StatsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             wilson(11, 10)
 
+    def test_pending_harness_stop_is_aborted_not_a_game_result(self):
+        run = {'run': 'stopped', 'config': config(), 'events': [
+            {'kind': 'observation', 'payload': {'record_type': 'harness_stop', 'pending_action_id': '1'}}]}
+        result = summarize([run])
+        self.assertEqual(result['aborted'], 1)
+        self.assertEqual(result['completed'], 0)
+        self.assertIsNone(result['score_completed'])
+
+    def test_stop_and_terminal_conflict_requires_review(self):
+        run = {'run': 'conflict', 'config': config(), 'events': [
+            {'kind': 'observation', 'payload': {'record_type': 'harness_stop'}},
+            {'kind': 'terminal', 'payload': {'result': 'win'}}]}
+        with self.assertRaisesRegex(ValueError, 'conflicting harness stop'):
+            summarize([run])
+
     def test_empty_is_not_zero_performance(self):
         result = summarize([])
         self.assertIsNone(result['completion_ci95'])

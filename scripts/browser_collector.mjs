@@ -58,13 +58,26 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   }
   function runState() {
     let action = null;
+    let intent = null;
+    let promotionReserved = false;
+    let halted = false;
     let attempts = 0;
     for (const event of command(['export', run]).events) {
-      if (event.kind === 'intent') attempts++;
-      if (event.kind === 'intent') action = event.payload.action_id;
-      if (event.kind === 'verification' && event.payload.outcome !== 'uncertain') action = null;
+      if (event.kind === 'intent') {
+        attempts++;
+        action = event.payload.action_id;
+        intent = event.payload;
+        promotionReserved = false;
+      }
+      if (event.kind === 'observation' && event.payload.record_type === 'promotion_click_reservation'
+          && event.payload.action_id === action) promotionReserved = true;
+      if (event.kind === 'observation' && event.payload.record_type === 'harness_stop') halted = true;
+      if (event.kind === 'verification' && event.payload.outcome !== 'uncertain') {
+        action = null;
+        intent = null;
+      }
     }
-    return { pending: action, attempts };
+    return { pending: action, attempts, intent, promotionReserved, halted };
   }
   function pending() { return runState().pending; }
   async function capture({ emit = true } = {}) {
@@ -86,6 +99,7 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
     if (inFlight) throw new Error('Execution in flight');
     checkDeadline();
     const state = runState();
+    if (state.halted) throw new Error('Harness stopped; no further moves');
     if (state.pending !== null) throw new Error('Resolve pending action from a new observation first');
     if (state.attempts >= maxAttempts) throw new Error('Attempt cap reached; observe and stop');
     if (!lastObservation) throw new Error('Observe and select a move before calling move');
@@ -123,8 +137,48 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
     }
   }
 
+  async function promote({ actionId, at }) {
+    if (inFlight) throw new Error('Execution in flight');
+    checkDeadline();
+    const state = runState();
+    if (state.halted) throw new Error('Harness stopped; no further input');
+    if (state.pending !== actionId || !/[qrbn]$/.test(state.intent?.move || '')) {
+      throw new Error('Promotion must continue its matching declared promotion intent');
+    }
+    if (state.promotionReserved) throw new Error('Promotion input already reserved; observe instead of repeating');
+    if (!lastObservation) throw new Error('Observe the promotion chooser before continuing');
+    if (!Array.isArray(at) || at.length !== 2 || !at.every(Number.isFinite)) throw new Error('Invalid promotion coordinates');
+    inFlight = true;
+    try {
+      const pre = await capture({ emit: false });
+      checkDeadline();
+      append('observation', { record_type: 'promotion_click_reservation', action_id: actionId,
+        intended_promotion: state.intent.move.slice(-1), at, observed_at: pre.observed_at }, pre.file);
+      lastObservation = null;
+      append('tool', { capability: 'coordinate_click', stage: 'promotion', action_id: actionId, at });
+      try {
+        checkDeadline();
+        await target.click(at);
+        await target.getAXState({ emit: false });
+        return { action_id: actionId, outcome: 'pending_visual_verification', observation: await capture() };
+      } catch (error) {
+        lastObservation = null;
+        append('observation', { action_id: actionId, error: String(error), stage: 'promotion_execution' });
+        throw error;
+      }
+    } finally { inFlight = false; }
+  }
+  function halt({ reason, note }) {
+    if (inFlight) throw new Error('Execution in flight');
+    if (runState().halted) throw new Error('Harness stopped; record follow-up evidence separately');
+    if (!lastObservation) throw new Error('Observe before recording a harness stop');
+    append('observation', { record_type: 'harness_stop', reason, note,
+      pending_action_id: runState().pending, observed_at: lastObservation.observed_at }, lastObservation.file);
+    close(); // Preserve the pending chess action, without inventing an outcome.
+  }
   function verify({ actionId, outcome, note }) {
     if (inFlight) throw new Error('Execution in flight; await its result before verification');
+    if (runState().halted) throw new Error('Harness stopped; record follow-up evidence separately');
     if (!lastObservation) throw new Error('Observe before verifying');
     append('verification', { action_id: actionId, outcome, note,
       observed_at: lastObservation.observed_at }, lastObservation.file);
@@ -133,6 +187,7 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   function terminal({ result, note }) {
     assertActive();
     if (inFlight) throw new Error('Execution in flight');
+    if (runState().halted) throw new Error('Harness stopped; record follow-up evidence separately');
     if (!lastObservation) throw new Error('Observe the terminal UI before recording a result');
     append('terminal', { result, note, observed_at: lastObservation.observed_at }, lastObservation.file);
     close();
@@ -140,7 +195,7 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
   function provenance() {
     append('observation', { driver: 'native-cua', mode: 'screenshot-decisions',
       ax_policy: 'post-action mandatory refresh, discarded; no AX piece/state observations',
-      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 4, deadline, max_attempts: maxAttempts });
+      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 5, deadline, max_attempts: maxAttempts });
   }
   // Persist settings before the first move. Recovery adopts them when omitted
   // and rejects changed limits, instead of silently resetting local defaults.
@@ -168,5 +223,5 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
     close();
     throw error;
   }
-  return { observe, move, verify, terminal, provenance, pending, close };
+  return { observe, move, promote, verify, terminal, halt, provenance, pending, close };
 }
