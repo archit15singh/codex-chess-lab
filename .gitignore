@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+*.sqlite*
+evidence/private/*
+!evidence/private/.gitkeep
+artifacts/*
+!artifacts/.gitkeep
+output/
+
+docs/platform-permission.md

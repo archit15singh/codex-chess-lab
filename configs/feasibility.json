@@ -1,0 +1,9 @@
+{
+  "condition": "unaided",
+  "capabilities": ["screenshot", "coordinate_click"],
+  "model": "unverified-host-model",
+  "reasoning": "host setting not independently exposed",
+  "seed": 20261115,
+  "purpose": "feasibility",
+  "permission": "User attests permission for Duolingo research in thread, 2026-11-15; human consent excluded"
+}
