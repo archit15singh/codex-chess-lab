@@ -1,0 +1,4 @@
+# Local figure/paper generation and rendering; never needed by the player.
+matplotlib==3.11.2
+reportlab==5.1.0
+pymupdf==2.1
