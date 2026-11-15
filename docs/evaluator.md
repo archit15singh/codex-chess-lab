@@ -75,3 +75,28 @@ The no-chess standard-library test environment explicitly skips evaluator tests;
 run the dedicated evaluator environment to exercise them. No browser capture,
 model identification, tool-use compliance, consent, or screenshot interpretation
 is established by a legal PGN or a matching file checksum.
+
+## Per-game metrics
+
+After the visual/tool audit and engine evaluation, compute one run's metrics:
+
+```sh
+.venv/bin/python -m chesslab.metrics private/run/export.json private/run/evaluator.json \
+  --actor white --pgn private/run/game.pgn --output private/run/metrics.json
+```
+
+Choose actor color from the independent board audit. The command checks the
+evaluated PGN hash and matches the complete executed actor-move sequence before
+scoring. It retains rejected and unresolved intents in the attempt denominator;
+an uncertain verification followed by execution remains one attempt. A rejected
+intent alone does not establish an illegal chess choice.
+
+Report raw fixed-node score differences and finite-search inversions separately
+from nonnegative differences. Mate and bounded scores are excluded from numerical
+cp summaries with explicit counts. Threshold counts at100/200/300cp use only
+comparable executed moves; partial games are selected prefixes. Wall timing from
+decision image to intent and intent to verification includes orchestration and
+recording, so it is not an inference-compute measurement. Source hashes permit
+recomputation but do not establish image meaning or tool isolation. The module
+does not pool software versions, infer Elo, or turn post-stop platform outcomes
+into completed baseline games.
