@@ -22,6 +22,21 @@ to record a90-second final-submission deadline. Preparation and engine assistanc
 precede that clock. Host dispatch/startup consumes the actor budget;
 read back actual model/settings and audit the tool trace independently.
 
+To avoid spending the dispatch clock on template repair, prefer the controller
+command below instead of calling `launch` manually. It checks placeholders,
+model/effort, executable interpreter and frozen submission hashes before starting
+the clock, then writes the actor's brief and dispatch provenance:
+
+```sh
+.venv/bin/python -m chesslab.dispatch private/trial \
+  --template private/actor-template.txt --runtime private/submission-runtime \
+  --python /absolute/path/to/evaluator-venv/bin/python
+```
+
+The runtime working directory must select the frozen submission package; setting
+PYTHONPATH alone does not override a package in the current directory. Preserve
+dispatch failures and actual host startup delay; never reset a trial's clock.
+
 Arms A/B/H/I receive no legality feedback. C/D/E/F/G receive one initial boolean
 verdict, never a legal-move list or explanation. B/D/E/F/G have exact occupancy;
 E requests low effort; F chooses high iff in check, at most10legal moves, or at
