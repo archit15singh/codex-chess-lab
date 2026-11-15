@@ -70,6 +70,8 @@ def game_metrics(run, evaluation, *, actor):
         scores = [row['best'], row['selected']]
         if any(s.get('mate') is not None for s in scores):
             missing['mate_score'] += 1
+        elif any(type(s.get(flag)) is not bool for s in scores for flag in ('lowerbound', 'upperbound')):
+            missing['missing_bound_metadata'] += 1
         elif any(s.get(flag) for s in scores for flag in ('lowerbound', 'upperbound')):
             missing['bounded_score'] += 1
         elif any(s.get('cp') is None for s in scores):
