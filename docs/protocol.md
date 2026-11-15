@@ -1,7 +1,9 @@
-# Experimental protocol v0.1
+# Experimental protocol v0.2
 
 Status: prospective design; feasibility is separate from confirmatory evidence.
 Freeze a version and hashes before the pilot. Amendments retain dated reasons.
+Version0.2 addresses independent methodological review; an already-started run
+retains its frozen v0.1/driver records and is identified in the amendment ledger.
 
 ## Questions and estimands
 
@@ -27,7 +29,12 @@ Unknown model identity or hidden effort settings preclude model-specific claims.
 State, history and legality need matched/factorial comparisons, not only cumulative
 addition. Use common positions with randomized condition order in independent
 contexts. Keep model, reasoning, opponent, color, time control and task version
-fixed within each matched comparison. Record treatment availability, actual tool
+fixed within each matched comparison. Define the exact state fields, their oracle
+source and error feedback before an ablation. Treat side to move, castling rights
+and en-passant information as additional channels if not visually observable.
+A legality treatment must not silently return engine rankings. Test history on
+identical screenshot sequences with storage as the changed factor; isolated static
+positions alone cannot establish state-tracking memory benefit. Record treatment availability, actual tool
 calls, hardware, software and execution budgets. Actual session capabilities,
 not desired model names, determine feasible treatments.
 
@@ -45,6 +52,10 @@ family and position identity, not random moves from the same game. Hash split
 manifests before evaluation. Public benchmarks have potential pretraining exposure;
 generated unseen legal positions reduce reuse but do not prove no contamination.
 The current developer/researcher context is unsuitable as a frozen baseline.
+Use training data to generate lessons, development data to select candidates, and
+a locked final test for the frozen selected candidate. Never revise from final-test
+answers and then reuse those items as held out. Repeated development comparisons
+are exploratory and do not constitute independent confirmatory replications.
 
 ## Pilot and resource policy
 
@@ -53,11 +64,17 @@ pilot, balanced colors where the product permits and randomized run order. Oscar
 is adaptive; record its visible setting and history effects rather than treating
 it as a calibrated fixed opponent. If color or opponent control is unavailable,
 report it and use common-position tests as additional evidence, not a replacement
-for specified full games. No new paid API or recurring jobs without approval.
+for specified full games. This sequential adaptive-account pilot is descriptive
+and conditional on that account history; it does not establish IID opponents.
+Only an independently controlled design can support an independent-game
+uncertainty model; matched positions cannot retroactively calibrate Oscar. No new paid API or recurring jobs without approval.
 Initial limits: one live game at a time, 20 minutes wall time per game (record
 actual platform semantics), at most 200 attempted white/black agent moves, two
-recovery observations before marking an interaction failure. A platform timeout
-is a result; do not silently replace it. Token/cost metadata unavailable from the
+recovery observations before marking an interaction failure. An official platform timeout loss is a completed game loss when the UI verifies
+that outcome. A harness wall timeout is an aborted run unless the platform
+independently confirms a game outcome. Unresolved execution remains incomplete
+until observed; never invent a win/loss or silently replace that run. Report all
+started games and each failure category, plus completed-game score separately. Token/cost metadata unavailable from the
 host remain unknown. Do not invent budget control that the host does not expose.
 
 After the pilot, estimate variance and clustered failure rates. Choose a fixed
@@ -78,8 +95,11 @@ limits, not only its nominal depth. Never infer human Elo from average loss.
 
 ## Statistics
 
-Use raw denominators, Wilson 95% completion intervals for independent game-level
-Bernoulli observations, and score fractions with draws worth one half. Paired
+Use raw denominators and score fractions with draws worth one half. Wilson95%
+completion intervals require independent game-level Bernoulli observations.
+If that assumption is unverified (including adaptive Oscar), label any interval
+as an IID sensitivity calculation whose nominal coverage is not established;
+use descriptive counts as the primary pilot result. Paired
 comparisons and clustered bootstrap by game/opponent/opening handle dependence;
 move-level rows are not independent game replicates. Bootstrap seeds and resample
 counts must be recorded. Estimate relative ratings only against a calibrated
@@ -96,8 +116,11 @@ protocol contamination, missing evidence and unknown causes separately. Preserve
 both initial failure and recovery, with evidence references.
 
 Post-game loop: audit completed training run -> group evidenced failures -> propose
-one specific lesson -> freeze a version -> evaluate against frozen control on an
-unseen split -> estimate paired uncertainty -> retain, reject or mark inconclusive.
+one specific lesson -> freeze a version -> compare against control on development
+data -> select and freeze a candidate -> evaluate once on a locked final split ->
+estimate paired uncertainty -> retain, reject or mark inconclusive. Archive that
+final split from further adaptive tuning and use a new untouched final split for
+any later revised candidate.
 Keep lesson scope, provenance, training IDs, test manifest hash and version. The
 baseline never receives these lessons. This is prompt/memory adaptation; no claim
 of changed weights. Infrastructure changes need tests; chess advice needs held-out

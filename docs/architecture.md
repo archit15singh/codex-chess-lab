@@ -33,7 +33,9 @@ host-tool compliance and configuration authenticity are independent audit tasks.
 A database insertion is not an experimental verification.
 
 The host currently exposes native Brave screenshots and input. Browser-tab host
-access was unavailable at entry. The feasibility driver is a deterministic host
-helper that saves before/after screenshots and JSONL actions; it is not yet a
-fully integrated collector adapter. The pilot must integrate reservations and
-verification for every move before expansion. A post-click return is not success.
+access was unavailable at entry. The native collector wrapper saves screenshots and reserves each move in SQLite
+before clicking, then requires explicit visual verification. Its subprocess calls
+only the local evidence CLI; native CUA performs all UI actions. A post-click return
+is not success. See browser-collector.md for recovery and evaluator.md for
+post-game analysis. Earlier experimental traces retain their original driver
+versions and any integration limitations.

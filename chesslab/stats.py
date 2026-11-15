@@ -47,6 +47,7 @@ def summarize(runs: list[dict]) -> dict:
     score = sum({'win': 1, 'draw': .5}.get(r, 0) for r in results)
     return {'started': len(runs), 'completed': completed,
             'completion_ci95': wilson(completed, len(runs)),
+            'interval_assumption': 'IID Bernoulli games; nominal coverage not established for adaptive opponents',
             'wins': results.count('win'), 'draws': results.count('draw'),
             'losses': results.count('loss'), 'aborted': results.count('aborted'),
             'incomplete': results.count('incomplete'),

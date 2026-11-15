@@ -10,6 +10,7 @@ The evidence collector and its tests use only the Python standard library:
 
 ```sh
 python3 -m unittest discover -s tests -v
+node --test tests/browser_collector.test.mjs
 python3 -m chesslab --help
 python3 -m chesslab create my-run configs/feasibility.json
 python3 -m chesslab export my-run
@@ -31,6 +32,8 @@ python3.13 -m venv .venv
 
 - [Protocol](docs/protocol.md): experimental controls, budgets and analysis.
 - [Architecture](docs/architecture.md): small modules and evidence boundaries.
+- [Native collector](docs/browser-collector.md): screenshot and guarded-click workflow.
+- [Evaluator](docs/evaluator.md): strict PGN and optional bounded Stockfish analysis.
 - [Milestones](docs/milestones.md): acceptance criteria and completion evidence.
 - [Literature](docs/literature.md): primary sources; external findings are not ours.
 - `configs/`: immutable run inputs; `chesslab/`: collection and descriptive stats.
