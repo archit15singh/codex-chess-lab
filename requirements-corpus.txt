@@ -1,0 +1,3 @@
+# Offline evaluator-owned rendering/construction; never install into player context.
+-r requirements-evaluator.txt
+pymupdf==2.1
