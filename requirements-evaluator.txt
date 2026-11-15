@@ -1,0 +1,2 @@
+# Post-game only; keep out of baseline player environment.
+chess==1.11.2
