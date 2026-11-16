@@ -63,6 +63,23 @@ class BoardFixture:
 
 
 class BoardTests(BoardFixture, unittest.TestCase):
+    def test_constructor_failure_records_cleanup_before_closing_journal(self):
+        calls = []
+        class Tracking(FakeOpponent):
+            def close(self):
+                calls.append('actual synthetic close')
+                return 0
+        path = self.root / 'constructor-failure'
+        create_run(path, self.controlled())
+        with patch('chesslab.local_board.time.monotonic_ns', side_effect=[100, 110, 300, 340]), \
+                patch.object(Game, '_persist', side_effect=OSError('synthetic persistence failure')):
+            with self.assertRaisesRegex(OSError, 'synthetic persistence'): Game(path, engine_factory=Tracking)
+        events = list(map(json.loads, (path / 'events.jsonl').read_text().splitlines()))
+        self.assertEqual(calls, ['actual synthetic close'])
+        self.assertEqual([(e['phase'], e['active_ns']) for e in events if e['kind'] == 'engine_active_segment'],
+                         [('startup', 10), ('cleanup', 40)])
+        self.assertEqual([e['process_returncode'] for e in events if e['kind'] == 'opponent_closed'], [0])
+
     def test_active_engine_segments_include_startup_search_cleanup_not_idle(self):
         with patch('chesslab.local_board.time.monotonic_ns', side_effect=[100, 110, 200, 230, 300, 340]):
             g = self.game(self.controlled())

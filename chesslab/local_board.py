@@ -191,9 +191,11 @@ class Game:
             self._start_opponent()
         except BaseException as exc:
             self._event('startup_failure', error_type=type(exc).__name__)
-            self.journal.close()
-            if self.opponent:
-                self.opponent.close()
+            try:
+                if self.opponent:
+                    self._close_opponent()
+            finally:
+                self.journal.close()
             raise
 
     def _event(self, kind, **details):
