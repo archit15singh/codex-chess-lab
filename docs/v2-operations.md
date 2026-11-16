@@ -91,6 +91,11 @@ server process and browser before replacing an owner or sending another action.
 A stale file, timeout or missing observation alone is not proof a subject stopped.
 Preserve every attempt and error; follow the frozen recovery rule for the cohort.
 
+For larger exact family comparisons, use [grouped references](grouped-reference.md).
+It retains one all-arm common cohort and exact inclusive tails; the historical V1
+enumeration helper remains unchanged. The scientific protocol must separately
+justify label swaps, endpoint interpretation and uncertainty.
+
 V1's completion record and artifacts remain separate. Source-only PRs and merges
 are authorized; study evidence, screenshots, model traces and paper outputs stay
 under the repository's ignored private/artifact paths until publication approval.
