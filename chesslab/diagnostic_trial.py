@@ -16,7 +16,8 @@ import sys
 
 TASKS = {'perception', 'history', 'correction', 'move'}
 CONDITIONS = {'unaided', 'state', 'history', 'feedback', 'no_feedback',
-              'reasoning_medium', 'reasoning_high', 'search', 'candidate', 'sham'}
+              'reasoning_medium', 'reasoning_high', 'search', 'candidate', 'sham',
+              'no_history'}
 SQUARES = {f'{f}{r}' for f in 'abcdefgh' for r in '12345678'}
 PIECES = set('PNBRQKpnbrqk.?')
 
@@ -63,6 +64,8 @@ def validate_config(value):
         raise ValueError('explicit diagnostic configuration required')
     if value['task'] not in TASKS or value['condition'] not in CONDITIONS:
         raise ValueError('unknown task or condition')
+    if value['condition'] == 'no_history' and value['task'] != 'history':
+        raise ValueError('no_history is a current-only history control')
     if value['purpose'] not in {'pilot', 'training', 'development', 'heldout', 'synthetic'}:
         raise ValueError('unknown purpose')
     for key in ['trial_id', 'model', 'effort']:
@@ -119,11 +122,20 @@ def validate_config(value):
         raise ValueError('bounded candidate/sham attachment required')
 
 
+def has_exposure(config):
+    return config['task'] == 'history' and config['condition'] != 'no_history'
+
+
 def prepare(directory, config, images, *, image_plies=None):
     validate_config(config)
     if not isinstance(images, list) or not 1 <= len(images) <= 24:
         raise ValueError('explicit bounded image allowlist required')
-    if config['task'] == 'history':
+    if config['condition'] == 'no_history':
+        if (len(images) != 1 or not isinstance(image_plies, list) or len(image_plies) != 1
+                or type(image_plies[0]) is not int
+                or image_plies[0] <= config['context']['query']['checkpoint_ply']):
+            raise ValueError('current-only history requires one labelled final image after query ply')
+    elif has_exposure(config):
         if (not isinstance(image_plies, list) or len(image_plies) != len(images)
                 or any(type(n) is not int or n < 0 for n in image_plies)
                 or image_plies != sorted(set(image_plies))
@@ -152,7 +164,7 @@ def prepare(directory, config, images, *, image_plies=None):
     # exposure phase, not the query allowlist. Retained context remains allowed.
     packet = {'task': config['task'], 'images': refs[-1:] if config['task'] == 'history' else refs,
               'context': config['context']}
-    if config['task'] == 'history':
+    if has_exposure(config):
         exposure = {'task': 'history_exposure', 'images': refs[:-1],
                     'orientation': config['context']['orientation'],
                     'instruction': 'Observe the ordered frames. A later turn asks about history; reply READY without opening other files.'}
@@ -182,7 +194,7 @@ def record_exposure(directory, actor_thread_id, completed_turn_id, evidence_file
     """Pin controller-verified exposure proof; actual host auditing is mandatory."""
     directory = Path(directory)
     manifest = verify(directory)
-    if manifest['config']['task'] != 'history':
+    if not has_exposure(manifest['config']):
         raise ValueError('exposure phase belongs only to history tasks')
     if any(not isinstance(v, str) or not v.strip() for v in [actor_thread_id, completed_turn_id]):
         raise ValueError('actual actor and completed exposure turn required')
@@ -198,6 +210,8 @@ def record_exposure(directory, actor_thread_id, completed_turn_id, evidence_file
 
 
 def exposure_receipt(directory, manifest, actor_thread_id):
+    if not has_exposure(manifest['config']):
+        raise ValueError('this condition has no exposure phase')
     receipt = strict_json((directory / 'exposure-complete.json').read_bytes())
     if (not actor_thread_id or receipt['actor_thread_id'] != actor_thread_id
             or receipt['manifest_sha256'] != digest((directory / 'manifest.json').read_bytes())
@@ -213,7 +227,7 @@ def launch(directory, *, actor_thread_id=None):
     clock = {'opened_at': opened.isoformat(),
              'deadline': (opened + timedelta(seconds=config['seconds'])).isoformat(),
              'manifest_sha256': digest((directory / 'manifest.json').read_bytes())}
-    if config['task'] == 'history':
+    if has_exposure(config):
         exposure_receipt(directory, verify(directory), actor_thread_id)
         clock['actor_thread_id'] = actor_thread_id
         clock['exposure_sha256'] = digest((directory / 'exposure-complete.json').read_bytes())
@@ -240,7 +254,7 @@ def submit(directory, raw):
     manifest = verify(directory)
     clock = strict_json((directory / 'clock.json').read_bytes())
     expected = {'opened_at', 'deadline', 'manifest_sha256'}
-    if manifest['config']['task'] == 'history':
+    if has_exposure(manifest['config']):
         expected |= {'actor_thread_id', 'exposure_sha256'}
         exposure_receipt(directory, manifest, clock.get('actor_thread_id'))
         if clock.get('exposure_sha256') != digest((directory / 'exposure-complete.json').read_bytes()):
@@ -280,7 +294,7 @@ def read_result(directory):
     if (clock['manifest_sha256'] != digest((directory / 'manifest.json').read_bytes())
             or record['clock_sha256'] != digest((directory / 'clock.json').read_bytes())):
         raise ValueError('clock or manifest commitment changed')
-    if manifest['config']['task'] == 'history':
+    if has_exposure(manifest['config']):
         exposure_receipt(directory, manifest, clock.get('actor_thread_id'))
         if clock.get('exposure_sha256') != digest((directory / 'exposure-complete.json').read_bytes()):
             raise ValueError('exposure receipt changed')

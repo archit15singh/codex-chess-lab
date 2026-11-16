@@ -124,6 +124,51 @@ class DiagnosticDeliveryTests(unittest.TestCase):
             trial.submit(self.folder, b'{"recall":{"b1":"N","g1":"."}}')
         self.assertTrue(trial.read_result(self.folder)['format_valid'])
 
+    def test_current_only_history_has_no_past_files_or_exposure_requirement(self):
+        c = config(task='history', condition='no_history')
+        c['context']['query'] = {'checkpoint_ply': 26, 'squares': ['b1', 'g1']}
+        trial.prepare(self.folder, c, [self.image], image_plies=[60])
+        packet = json.loads((self.folder / 'input.json').read_text())
+        self.assertEqual([i['ply'] for i in packet['images']], [60])
+        self.assertFalse((self.folder / 'exposure.json').exists())
+        self.assertEqual(len(list(self.folder.glob('image-*'))), 1)
+        with patch.object(trial, 'now', return_value=self.start):
+            clock = trial.launch(self.folder)
+        self.assertNotIn('actor_thread_id', clock)
+        self.assertNotIn('exposure_sha256', clock)
+        with patch.object(trial, 'now', return_value=self.start + timedelta(seconds=1)):
+            trial.submit(self.folder, b'{"recall":{"b1":"?","g1":"."}}')
+        self.assertTrue(trial.read_result(self.folder)['format_valid'])
+        proof = self.root / 'proof.json'
+        proof.write_text('{}')
+        with self.assertRaisesRegex(ValueError, 'exposure phase'):
+            trial.record_exposure(self.folder, 'actor', 'turn', proof)
+
+    def test_current_only_history_rejects_past_images_and_wrong_task(self):
+        c = config(task='history', condition='no_history')
+        c['context']['query'] = {'checkpoint_ply': 26, 'squares': ['b1']}
+        for images, plies in [([self.image, self.image], [26, 60]),
+                              ([self.image], None), ([self.image], [26]),
+                              ([self.image], [True])]:
+            with self.subTest(plies=plies), self.assertRaisesRegex(ValueError, 'current-only'):
+                trial.prepare(self.folder, c, images, image_plies=plies)
+            self.assertFalse(self.folder.exists())
+        c = config(condition='no_history')
+        with self.assertRaisesRegex(ValueError, 'history control'):
+            trial.prepare(self.folder, c, [self.image])
+
+    def test_current_only_rejects_attachments_and_staged_actor_binding(self):
+        c = config(task='history', condition='no_history')
+        c['context']['query'] = {'checkpoint_ply': 26, 'squares': ['b1']}
+        c['context']['history_record'] = []
+        with self.assertRaisesRegex(ValueError, 'unassigned information'):
+            trial.prepare(self.folder, c, [self.image], image_plies=[60])
+        del c['context']['history_record']
+        trial.prepare(self.folder, c, [self.image], image_plies=[60])
+        with self.assertRaisesRegex(ValueError, 'staged actor binding'):
+            trial.launch(self.folder, actor_thread_id='exposed-actor')
+        self.assertFalse((self.folder / 'clock.json').exists())
+
 
 if __name__ == '__main__':
     unittest.main()
