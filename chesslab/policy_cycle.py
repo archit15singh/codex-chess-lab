@@ -129,7 +129,7 @@ def choose(plan, observations):
         raise ValueError('complete development observations required')
     seen, credits, references = set(), {}, {}
     for row in observations:
-        _keys(row, 'unit arm received on_time format_valid legal reference_available '
+        _keys(row, 'unit arm received on_time format_valid legal integrity_valid reference_available '
               'best_agreement source_sha256')
         _text(row['unit'])
         _text(row['arm'])
@@ -138,7 +138,7 @@ def choose(plan, observations):
             raise ValueError('duplicate or unassigned development observation')
         seen.add(key)
         _hash(row['source_sha256'])
-        for name in ('received', 'on_time', 'format_valid', 'legal', 'reference_available'):
+        for name in ('received', 'on_time', 'format_valid', 'legal', 'integrity_valid', 'reference_available'):
             if type(row[name]) is not bool:
                 raise ValueError('observation flags must be booleans')
         references.setdefault(row['unit'], set()).add(row['reference_available'])
@@ -149,7 +149,7 @@ def choose(plan, observations):
         if ((comparable and type(row['best_agreement']) is not bool)
                 or (not comparable and row['best_agreement'] is not None)):
             raise ValueError('agreement must be unknown unless legal and reference available')
-        credits[key] = int(row['received'] and row['on_time'] and row['format_valid']
+        credits[key] = int(row['received'] and row['on_time'] and row['format_valid'] and row['integrity_valid']
                            and row['legal'] and row['best_agreement'] is True)
     if seen != expected:
         raise ValueError('every assigned arm/unit requires a row, including failures')
