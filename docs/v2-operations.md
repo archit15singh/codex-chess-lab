@@ -57,6 +57,15 @@ For diagnostic preparation or a history query, read
 [V2 diagnostic construction and staged delivery](v2-diagnostics.md) before launch.
 History exposure and query use the same actor with different file allowlists.
 
+Reserve an execution slot for the player's entire assignment, including admission,
+exposure and later turns. A READY response can leave its worker inactive while the
+assignment still needs followups. Do not spend that slot on an unrelated review
+or another subject. Inspect the actual host inventory, including pending workers,
+before launching a clock. A rejected dispatch is evidence of delivery failure,
+not permission to reset the clock or sample another answer. Record accepted-call,
+actor-receipt, submission and actual-stop timestamps separately; turn duration is
+not the time the actor had remaining before the deadline.
+
 Use a fresh player context per game. The mechanical controller may supply a
 screenshot and the visible turn/orientation, receive an intended move and perform
 native coordinate input. Return only permitted visible feedback. Truth-state and
