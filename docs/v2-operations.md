@@ -47,6 +47,9 @@ delivery/collection adapter, independently verify actual start/end timestamps, a
 keep engine-time and disk accounting alongside this ledger. Reserve worst-case
 engine work before an operation and record actual work and overruns afterward.
 The frozen M2 protocol owns final per-query limits and all stop rules.
+Use the separate [engine active-work ledger](v2-engine-work.md) across V2 pilots,
+opponents, assistance and reference evaluation. Reserve before work and settle
+only against measured startup/search/cleanup and proven termination evidence.
 
 ## Player and controller channels
 

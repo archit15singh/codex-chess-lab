@@ -63,6 +63,34 @@ class BoardFixture:
 
 
 class BoardTests(BoardFixture, unittest.TestCase):
+    def test_active_engine_segments_include_startup_search_cleanup_not_idle(self):
+        with patch('chesslab.local_board.time.monotonic_ns', side_effect=[100, 110, 200, 230, 300, 340]):
+            g = self.game(self.controlled())
+            self.clock.value = 12  # Waiting for the player is not an engine segment.
+            self.move(g, 'e2e4', fixture=False)
+            g.worker.join(timeout=2)
+            self.assertFalse(g.worker.is_alive())
+            self.clock.value = 25
+            g.close()
+        segments = [e for e in map(json.loads, (g.directory / 'events.jsonl').read_text().splitlines())
+                    if e['kind'] == 'engine_active_segment']
+        self.assertEqual([(e['phase'], e['active_ns']) for e in segments],
+                         [('startup', 10), ('search', 30), ('cleanup', 40)])
+
+    def test_failed_search_still_has_exactly_one_measured_segment(self):
+        class Broken(FakeOpponent):
+            def move(self, board): raise ValueError('synthetic failure')
+        with patch('chesslab.local_board.time.monotonic_ns', side_effect=[100, 110, 200, 230, 300, 340]):
+            g = self.game(self.controlled(player_color='black'), factory=Broken)
+            g.worker.join(timeout=2)
+            self.assertFalse(g.worker.is_alive())
+            g.close()
+        events = list(map(json.loads, (g.directory / 'events.jsonl').read_text().splitlines()))
+        segments = [e for e in events if e['kind'] == 'engine_active_segment']
+        self.assertEqual([(e['phase'], e['active_ns']) for e in segments],
+                         [('startup', 10), ('search', 30), ('cleanup', 40)])
+        self.assertEqual(g.reason, 'opponent_error')
+
     def test_prepare_freezes_without_clocks_and_refuses_overwrite(self):
         path = self.root / 'prepared'
         create_run(path, config())

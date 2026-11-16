@@ -176,7 +176,12 @@ class Game:
                 if sha(engine['path']) != engine['binary_sha256'] or any(sha(p) != h for p, h in engine['external_network_sha256'].items()):
                     raise ValueError('engine binary/network changed')
                 if not self.board.is_game_over():
-                    self.opponent = engine_factory(engine)
+                    active_started = time.monotonic_ns()
+                    try:
+                        self.opponent = engine_factory(engine)
+                    finally:
+                        self._event('engine_active_segment', phase='startup',
+                                    active_ns=time.monotonic_ns() - active_started)
             self.started = self.clock()
             self.turn_started = self.started
             self._event('game_started', mode=self.config['mode'], config_sha256=freeze['config_sha256'],
@@ -227,7 +232,12 @@ class Game:
 
     def _close_opponent(self):
         if self.opponent and not self.opponent_closed:
-            code = self.opponent.close()  # Adapter returns only after proven process exit.
+            active_started = time.monotonic_ns()
+            try:
+                code = self.opponent.close()  # Returns only after proven process exit.
+            finally:
+                self._event('engine_active_segment', phase='cleanup',
+                            active_ns=time.monotonic_ns() - active_started)
             self.opponent_closed = True
             self._event('opponent_closed', process_returncode=code)
 
@@ -347,7 +357,14 @@ class Game:
     def _opponent_move(self, version, board):
         started = time.monotonic()
         try:
-            move = self.opponent.move(board)
+            active_started = time.monotonic_ns()
+            try:
+                move = self.opponent.move(board)
+            finally:
+                active_ns = time.monotonic_ns() - active_started
+                with self.lock:
+                    self._event('engine_active_segment', phase='search', active_ns=active_ns,
+                                expected_version=version)
             with self.lock:
                 self._event('opponent_returned', elapsed_seconds=time.monotonic() - started,
                             work=getattr(self.opponent, 'last_info', {}))
