@@ -96,6 +96,10 @@ It retains one all-arm common cohort and exact inclusive tails; the historical V
 enumeration helper remains unchanged. The scientific protocol must separately
 justify label swaps, endpoint interpretation and uncertainty.
 
+For bounded candidate development, use the [policy cycle](v2-policy-cycle.md).
+Seal candidate prompts before development outcomes, retain all assigned failures,
+and freeze one exact family-weighted selection before exposing final outcomes.
+
 V1's completion record and artifacts remain separate. Source-only PRs and merges
 are authorized; study evidence, screenshots, model traces and paper outputs stay
 under the repository's ignored private/artifact paths until publication approval.
