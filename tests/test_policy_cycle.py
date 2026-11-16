@@ -23,7 +23,7 @@ def fixture():
 
 def observations(plan):
     return [{'unit': u['unit'], 'arm': p['id'], 'received': True, 'on_time': True,
-             'format_valid': True, 'legal': True, 'reference_available': True,
+             'format_valid': True, 'legal': True, 'integrity_valid': True, 'reference_available': True,
              'best_agreement': False, 'source_sha256': 'd' * 64}
             for u in plan['development_units'] for p in validate_plan(plan)]
 
@@ -79,6 +79,24 @@ class PolicyCycleTests(unittest.TestCase):
         rows = observations(plan)
         rows[0]['received'] = False
         with self.assertRaisesRegex(ValueError, 'inconsistent'):
+            choose(plan, rows)
+
+    def test_unverified_integrity_cannot_earn_credit_for_an_otherwise_correct_answer(self):
+        plan = fixture()
+        rows = observations(plan)
+        for row in rows:
+            if row['arm'] == 'c1':
+                row.update(best_agreement=True, integrity_valid=False)
+            if row['arm'] == 'c2' and row['unit'] == 'y1':
+                row['best_agreement'] = True
+        result = choose(plan, rows)
+        self.assertEqual(result['scores_exact']['c1'], '0')
+        self.assertEqual(result['selected_id'], 'c2')
+        rows[0]['integrity_valid'] = None
+        with self.assertRaisesRegex(ValueError, 'booleans'):
+            choose(plan, rows)
+        del rows[0]['integrity_valid']
+        with self.assertRaisesRegex(ValueError, 'expected'):
             choose(plan, rows)
 
     def test_invalid_splits_candidates_and_unassigned_rows(self):

@@ -41,7 +41,7 @@ The plan requires these fields (see the synthetic fixture in
 
 The development file has exactly `phase: "development"`, `plan_sha256` and
 `observations`. Each observation has `unit`, `arm`, `received`, `on_time`,
-`format_valid`, `legal`, `reference_available`, `best_agreement` and
+`format_valid`, `legal`, `integrity_valid`, `reference_available`, `best_agreement` and
 `source_sha256`. Flags are booleans; agreement is a boolean when both legality
 and reference are available, otherwise JSON null. Missing answers still require
 rows, with false receipt/timing/format/legality and null agreement. A late valid
@@ -49,13 +49,21 @@ answer may retain its observed agreement. Reference availability is common acros
 all arms on each unit. Preserve why verification is unavailable in the hashed
 source receipt; it is not a known chess-quality failure.
 
-Verified credit is one only when receipt is on time, format and legality are valid,
+Verified credit is one only when receipt is on time, format, legality and integrity are valid,
 and the shared reference agrees. Every other assignment earns operational credit
 zero. Selection maximizes the equally weighted mean of within-family mean credits
 among candidates, using exact fractions. Exact ties select the earliest candidate
 in the sealed list. Controls are scored but cannot win candidate selection. Even
 an adverse or all-zero cycle selects one candidate for the untouched final test.
 Selection never implies promotion; apply the separately frozen final rule once.
+
+Set `integrity_valid` only after independently auditing the declared host settings,
+observation/tool boundaries and actor continuity. A violation or unverified boundary
+earns zero operational verified credit even if the answer is timely, well formed,
+legal and reference-matching. Preserve those other flags and the actual answer;
+do not mislabel contamination as a syntax failure or known chess-quality error.
+The source receipt records the reason. This module checks the explicit boolean,
+not the truth of the audit, and refuses older rows that omit it.
 
 These files enforce a reproducible procedural record, not a security boundary.
 Hashes supplied by a caller do not prove the original evidence, chronology,
