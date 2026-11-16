@@ -88,3 +88,10 @@ an exact-value table. It retains finite-search inversions and missing/mate score
 It is not a strength estimate or the final research package. Keep output local;
 review it in Brave when no game owns the browser. CLI creation refuses to replace
 an existing file; intentional notebook revisions may regenerate it after review.
+
+## Private reproduction archives
+
+Use [hash-checked reproduction bundles](docs/reproducible-bundles.md) to package
+an explicit reviewed file list, verify every payload, extract into a new directory
+and read back the extracted manifest. Keep study data and reports local; source
+PR authorization does not authorize publishing a research package.
