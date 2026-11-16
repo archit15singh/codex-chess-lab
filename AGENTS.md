@@ -4,6 +4,8 @@ For an explicitly requested V2 study, read RESEARCH_PLAN_V2.md for scope, milest
 acceptance and completion; preserve the V1 specification and evidence. For V1,
 read RESEARCH_PLAN.md, docs/milestones.md and docs/protocol.md. Shared collection
 mechanics below apply to both; V2 scientific settings come from its frozen protocol.
+Before launching V2 subjects, read docs/v2-operations.md for the shared assignment
+budget, player/controller channels and interruption recovery.
 Confirm the live worktree and private checkpoint before resuming a game; a recorded
 intent is not proof of execution. Inspect the screen before retrying any uncertain
 click.
