@@ -134,6 +134,19 @@ a missing exposure receipt, changed proof or different actor identifier. Exposur
 and query packets together do not enforce a filesystem/tool sandbox; those access
 restrictions require actual trace checks before making a memory claim.
 
+An optional `no_history` condition provides a current-board-only construct control.
+Use task `history`, the same past checkpoint question and rules metadata, and
+exactly one final image with its later `image_plies` label. Preparation refuses
+past images or historical attachments and creates no exposure packet. Launch it
+in a fresh actor without an exposure turn or `--actor-thread-id`. Audit that the
+actor actually received no past observations; absence of a receipt alone cannot
+prove blindness. The response remains the same recall JSON and is scored against
+the paired ambiguity witnesses. This comparison tests the value of historical
+information, while retained-context versus external-record arms test the extra
+record's benefit. Neither establishes game-playing benefit or independent bits
+from correlated queried squares. Freeze any extra assignments, randomized order,
+denominators and resource costs before collection.
+
 The move/perception/correction player, or the history actor's query turn, receives only `input.json`, its exact image paths and the frozen
 submission command. It submits one JSON object through quoted stdin to
 `python -m chesslab.diagnostic_trial submit /absolute/private/trial`. Use a frozen
