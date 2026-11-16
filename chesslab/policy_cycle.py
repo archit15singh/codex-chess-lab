@@ -28,6 +28,14 @@ def _text(value):
         raise ValueError('nonempty text required')
 
 
+def _prompt(value, *, baseline=False):
+    if baseline and value == '':
+        return  # No supplement: common admission is bound by the protocol hash.
+    _text(value)
+    if len(value) > 8000:
+        raise ValueError('prompt exceeds the diagnostic supplement limit')
+
+
 def _keys(value, names):
     if not isinstance(value, dict) or set(value) != set(names.split()):
         raise ValueError('unexpected fields; expected ' + names)
@@ -75,14 +83,15 @@ def validate_plan(plan):
         _keys(plan[name], 'id prompt')
         if plan[name]['id'] != name:
             raise ValueError('control IDs must be baseline and sham')
-        _text(plan[name]['prompt'])
+        _prompt(plan[name]['prompt'], baseline=name == 'baseline')
     candidates = plan['candidates']
     if not isinstance(candidates, list) or not 1 <= len(candidates) <= 3:
         raise ValueError('one through three policies, including revisions, required')
     for candidate in candidates:
         _keys(candidate, 'id prompt mechanism training_finding_indices')
-        for name in ('id', 'prompt', 'mechanism'):
+        for name in ('id', 'mechanism'):
             _text(candidate[name])
+        _prompt(candidate['prompt'])
         indices = candidate['training_finding_indices']
         if (not isinstance(indices, list) or not indices
                 or any(type(i) is not int or not 0 <= i < len(findings) for i in indices)
@@ -90,7 +99,8 @@ def validate_plan(plan):
             raise ValueError('candidate must cite distinct training findings')
     policies = [plan['baseline'], plan['sham'], *candidates]
     _names([p['id'] for p in policies])
-    _names([p['prompt'] for p in policies])
+    if len({p['prompt'] for p in policies}) != len(policies):
+        raise ValueError('distinct policy prompts required')
     return policies
 
 

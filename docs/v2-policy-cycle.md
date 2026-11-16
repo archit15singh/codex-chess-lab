@@ -31,8 +31,12 @@ The plan requires these fields (see the synthetic fixture in
   describe disjoint family labels. Every development unit is assigned to every
   arm; this tool is not for structurally incomplete multi-suite projections.
 - `training_findings` contain `family`, `category`, `evidence_sha256`.
-- `baseline` and `sham` contain their reserved `id` and full `prompt`.
-- `candidates`, in tie-break order, each contain `id`, full `prompt`, `mechanism`
+- `baseline` and `sham` contain their reserved `id` and exact policy `prompt`.
+  The baseline may use an empty prompt to keep the common admission unchanged;
+  the common admission template is part of the sealed protocol. Other policy
+  prompts must contain text, bounded to the diagnostic supplement's 8,000-character
+  limit. Preserve how each artifact is inserted into actual host messages.
+- `candidates`, in tie-break order, each contain `id`, exact `prompt`, `mechanism`
   and `training_finding_indices`. IDs and full prompts must be distinct.
 
 The development file has exactly `phase: "development"`, `plan_sha256` and

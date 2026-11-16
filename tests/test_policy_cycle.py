@@ -97,6 +97,15 @@ class PolicyCycleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unassigned'):
             choose(fixture(), rows)
 
+    def test_unchanged_baseline_and_bounded_supplements(self):
+        plan = fixture()
+        plan['baseline']['prompt'] = ''
+        self.assertEqual(validate_plan(plan)[0]['prompt'], '')
+        for bad in ['', ' ', 'x' * 8001]:
+            plan['candidates'][0]['prompt'] = bad
+            with self.assertRaises(ValueError):
+                validate_plan(plan)
+
     def test_seal_select_once_source_binding_and_self_contained_readback(self):
         with tempfile.TemporaryDirectory() as directory:
             plan_path = Path(directory) / 'plan.json'
