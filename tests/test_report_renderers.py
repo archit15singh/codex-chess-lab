@@ -37,6 +37,14 @@ class ReportTests(unittest.TestCase):
             root=Path(temp);assets=root/'assets';assets.mkdir();(root/'outside.png').write_bytes(b'not an image')
             with self.assertRaises(ValueError):html.render_markdown('![Caption](../outside.png)',assets,{})
 
+    def test_png_dimensions_reserve_layout_before_lazy_load(self):
+        import struct
+        with TemporaryDirectory() as temp:
+            root=Path(temp).resolve();(root/'figure.png').write_bytes(b'\x89PNG\r\n\x1a\n'+b'\x00\x00\x00\rIHDR'+struct.pack('>II',320,200))
+            body,_=html.render_markdown('![Example](figure.png)',root,{})
+            self.assertIn('width="320" height="200"',body)
+            self.assertIn('loading="lazy"',body)
+
     def test_print_normalization_and_unknown_glyph_rejection(self):
         self.assertEqual(paper.normalized('low\u2013high \u2264 2'),'low-high <= 2')
         with self.assertRaises(ValueError):paper.normalized('\u2603')

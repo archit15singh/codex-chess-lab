@@ -4,7 +4,7 @@
 Inputs are a Markdown manuscript, local figure aliases and precomputed contrast
 rows. The page performs formatting/filtering only, never statistical analysis.
 """
-import argparse,base64,csv,io,json,re,os
+import argparse,base64,csv,io,json,re,os,struct
 from html import escape
 from pathlib import Path
 
@@ -47,11 +47,16 @@ def render_markdown(text,root,aliases):
             flush();caption,name=image.groups();path=(root/aliases.get(name,name)).resolve(strict=True)
             if not path.is_relative_to(root):raise ValueError('figure escapes asset root')
             raw=path.read_bytes()
-            if raw.startswith(b'\x89PNG\r\n\x1a\n'):mime='image/png'
+            dimensions=''
+            if raw.startswith(b'\x89PNG\r\n\x1a\n'):
+                if len(raw)<24 or raw[12:16]!=b'IHDR':raise ValueError('invalid PNG dimensions')
+                width,height=struct.unpack('>II',raw[16:24])
+                if not width or not height:raise ValueError('empty PNG dimensions')
+                mime='image/png';dimensions=f' width="{width}" height="{height}"'
             elif raw.startswith(b'\xff\xd8'):mime='image/jpeg'
             else:raise ValueError('only local PNG/JPEG figures supported')
             data=base64.b64encode(raw).decode('ascii')
-            parts.append('<figure><img loading="lazy" alt="'+escape(caption,quote=True)+'" src="data:'+mime+';base64,'+data+'"><figcaption>'+inline(caption)+'</figcaption></figure>');i+=1;continue
+            parts.append('<figure><img loading="lazy"'+dimensions+' alt="'+escape(caption,quote=True)+'" src="data:'+mime+';base64,'+data+'"><figcaption>'+inline(caption)+'</figcaption></figure>');i+=1;continue
         if line.startswith('|'):
             flush();rows=[]
             while i<len(lines) and lines[i].strip().startswith('|'):
