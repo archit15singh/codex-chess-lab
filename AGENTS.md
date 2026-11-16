@@ -5,10 +5,11 @@ docs/protocol.md before collecting experimental data. Confirm the live worktree
 and private checkpoint before resuming a game; a recorded intent is not proof of
 execution. Inspect the screen before retrying any uncertain click.
 
-Run `python3 -m unittest discover -s tests -v` after collector changes. Post-game
-chess validation uses the isolated evaluator dependencies; the baseline collector
-stays independent of chess libraries. Tests and simulations prove engineering
-behavior, never Codex chess ability.
+Run `.venv/bin/python -m unittest discover -s tests -v` after collector or evaluator
+changes, using the environment with `requirements-corpus.txt` installed. A bare
+Python run can skip chess-dependent checks; inspect skips before accepting it as
+full verification. The baseline collector stays independent of chess libraries.
+Tests and simulations prove engineering behavior, never Codex chess ability.
 
 Before live play, use `python3 -m chesslab.freeze` to snapshot the mechanical
 runtime under the private evidence directory and verify its manifest. Pass that
