@@ -11,6 +11,11 @@ Python run can skip chess-dependent checks; inspect skips before accepting it as
 full verification. The baseline collector stays independent of chess libraries.
 Tests and simulations prove engineering behavior, never Codex chess ability.
 
+For exact sign-flip references, use `scripts.exact_reference.exact_reference` on
+Decimal-parsed endpoints. The frozen paired analysis retains its historical
+floating comparisons; preserve common cohorts and source-family weights when
+checking inclusive tails with the rational helper.
+
 Before live play, use `python3 -m chesslab.freeze` to snapshot the mechanical
 runtime under the private evidence directory and verify its manifest. Pass that
 snapshot as the collector repo/import path. Keep a live run independent of mutable
