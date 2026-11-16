@@ -50,6 +50,10 @@ The frozen M2 protocol owns final per-query limits and all stop rules.
 
 ## Player and controller channels
 
+For diagnostic preparation or a history query, read
+[V2 diagnostic construction and staged delivery](v2-diagnostics.md) before launch.
+History exposure and query use the same actor with different file allowlists.
+
 Use a fresh player context per game. The mechanical controller may supply a
 screenshot and the visible turn/orientation, receive an intended move and perform
 native coordinate input. Return only permitted visible feedback. Truth-state and
