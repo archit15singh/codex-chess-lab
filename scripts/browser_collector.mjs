@@ -3,7 +3,7 @@
  * The Python child process writes local evidence; all UI actions use the binding.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync, unlinkSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { randomUUID, createHash } from 'node:crypto';
@@ -192,10 +192,38 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
     append('terminal', { result, note, observed_at: lastObservation.observed_at }, lastObservation.file);
     close();
   }
+  function finish({ actionId, outcome, result, note }) {
+    assertActive();
+    if (inFlight) throw new Error('Execution in flight; await its result before verification');
+    if (runState().halted) throw new Error('Harness stopped; record follow-up evidence separately');
+    if (!lastObservation) throw new Error('Observe the terminal UI before verifying and finishing');
+    if (!['executed', 'not_executed'].includes(outcome)) throw new Error('Finish requires a conclusive verification outcome');
+    if (!['win', 'loss', 'draw', 'aborted'].includes(result)) throw new Error('Invalid terminal result');
+    const observation = { ...lastObservation };
+    const source = command(['export', run]).events.findLast(event => event.kind === 'observation'
+      && event.payload.file === observation.file && event.payload.observed_at === observation.observed_at)?.payload;
+    const hash = createHash('sha256').update(readFileSync(observation.file)).digest('hex');
+    if (!source || source.screenshot_path !== realpathSync(observation.file) || source.screenshot_sha256 !== hash) {
+      throw new Error('Terminal observation artifact changed or has no matching source record');
+    }
+    // Keep verify's pending-action checks and observation consumption unchanged.
+    verify({ actionId, outcome, note });
+    const verified = command(['export', run]).events.at(-1);
+    if (verified?.kind !== 'verification' || verified.payload.action_id !== actionId
+        || verified.payload.outcome !== outcome || verified.payload.screenshot_path !== source.screenshot_path
+        || verified.payload.observed_at !== observation.observed_at || verified.payload.screenshot_sha256 !== hash) {
+      throw new Error('Verification does not match terminal observation; inspect the ledger before recovery');
+    }
+    // Copy the checked immutable binding, rather than rehash potentially changed
+    // bytes. These are two appends: a failure must leave the verification visible.
+    append('terminal', { result, note, observed_at: observation.observed_at,
+      screenshot_path: source.screenshot_path, screenshot_sha256: hash });
+    close();
+  }
   function provenance() {
     append('observation', { driver: 'native-cua', mode: 'screenshot-decisions',
       ax_policy: 'post-action mandatory refresh, discarded; no AX piece/state observations',
-      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 5, deadline, max_attempts: maxAttempts });
+      collector_module: import.meta.url, collector_sha256: sourceSha256, collector_version: 6, deadline, max_attempts: maxAttempts });
   }
   // Persist settings before the first move. Recovery adopts them when omitted
   // and rejects changed limits, instead of silently resetting local defaults.
@@ -223,5 +251,5 @@ export function makeCollector({ target, repo, db, run, python = 'python3', direc
     close();
     throw error;
   }
-  return { observe, move, promote, verify, terminal, halt, provenance, pending, close };
+  return { observe, move, promote, verify, terminal, finish, halt, provenance, pending, close };
 }

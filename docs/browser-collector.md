@@ -70,14 +70,56 @@ and resolve that action before moving. Terminal recording releases ownership.
 After a crash, preserve the owner file until the old execution handle is confirmed
 terminal or missing; only then may the controller remove that exact stale owner
 file. PID, elapsed time and the lock file alone are not termination evidence.
-Never automatically expire or steal ownership. Every evidence-bearing CLI append reads the actual screenshot bytes and
-records the digest and path. Keep files local and validate their hashes again in
+Never automatically expire or steal ownership. Evidence-bearing CLI appends using
+`--artifact` read the actual screenshot bytes and record the digest and path.
+Keep files local and validate their hashes again in
 post-game audit. Clock/animation changes may alter screenshots; a changed image
 alone never proves a successful move.
 
-At a visibly verified game ending, call
-`collector.terminal({result:'win'|'loss'|'draw'|'aborted',note})`. This closes the
-run; export with `python -m chesslab export <id>`. Terminal results, permissions,
+When a fresh post-action image visibly establishes both the pending action's
+outcome and the game ending, call the bookkeeping-only helper **before** calling
+`verify` separately:
+
+```js
+collector.finish({
+  actionId, outcome: 'executed', // or 'not_executed'; never 'uncertain'
+  result: 'win', // 'win', 'loss', 'draw' or 'aborted', as visually confirmed
+  note: 'Describe the visible action outcome and terminal UI'
+});
+```
+
+`finish` requires the active owner, no native execution in flight, no harness stop
+and an unconsumed observation. It validates outcome and result before appending,
+checks the saved file against its source observation digest, and calls the normal
+verification path, including its matching pending-action guard. It then checks
+that verification's path, digest and `observed_at` against the source observation
+and appends a terminal event with that same binding. It closes ownership after
+success. It makes no screenshot, accessibility or input calls, so it can complete
+ledger bookkeeping after the host's UI completion summary. The caller must first
+inspect the terminal image; the collector does not infer checkmate or any result.
+
+These are two separate appends, **not an atomic transaction**. If verification
+succeeds and a later step fails, that verification remains recorded, its pending
+action is resolved, its observation is consumed, and ownership stays held until
+explicitly closed. Inspect the exported ledger before recovery: a terminal append
+may have committed even if its process reported an error. Do not repeat the action
+or pretend both appends failed. If closure is still needed, use a new observation
+with `terminal`, or preserve the existing immutable image and its checked binding
+in separately audited controller recovery evidence. `finish` cannot reuse a
+consumed image. The terminal event copies the checked verification binding rather
+than reading the file again; preserve screenshot files unchanged throughout this
+procedure and audit their hashes afterward. This is a procedural immutability
+requirement, not an operating-system guarantee against external file changes.
+
+`observed_at` is assigned after screenshot bytes return and the file is saved. It
+is the collector's observation timestamp, not a measured pixel capture time or
+the later verification/terminal append time; both events retain that same value.
+
+For a terminal UI with no pending action, observe and call
+`collector.terminal({result:'win'|'loss'|'draw'|'aborted',note})`. If you already
+called `verify`, it consumed the image, so this path requires another observation.
+An unresolved action still blocks `terminal`. This closes the run; export with
+`python -m chesslab export <id>`. Terminal results, permissions,
 model identities and host-tool compliance remain independently auditable claims.
 Provenance records the collector source hash computed when the module is imported.
 Use a unique revision import suffix when changing versions; freeze that version

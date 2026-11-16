@@ -207,3 +207,130 @@ test('unresolved promotion can halt without pretending the chess move resolved',
     assert.throws(() => restarted.halt({reason:'again'}), /stopped/);
   } finally { await rm(s.dir,{recursive:true,force:true}); }
 });
+
+function exportFixture(s) {
+  return JSON.parse(execFileSync(python, ['-m','chesslab','--db',s.db,'export','test'], {cwd:repo,encoding:'utf8'}));
+}
+
+test('finish binds verification and terminal to one fresh frame without native calls', async () => {
+  for (const outcome of ['executed', 'not_executed']) {
+    const s = await setup();
+    try {
+      await s.collector.observe({emit:false});
+      const moved = await s.collector.move({actionId:'1',move:'e2e4',from:[1,2],to:[3,4]});
+      const before = exportFixture(s);
+      s.target.getScreenshot = async () => { throw new Error('unexpected capture'); };
+      s.target.click = async () => { throw new Error('unexpected click'); };
+      s.target.getAXState = async () => { throw new Error('unexpected refresh'); };
+      s.collector.finish({actionId:'1',outcome,result:'aborted',note:'synthetic terminal frame'});
+      const record = exportFixture(s);
+      const [verification, terminal] = record.events.slice(-2);
+      assert.equal(verification.kind, 'verification');
+      assert.equal(terminal.kind, 'terminal');
+      assert.equal(verification.payload.outcome, outcome);
+      const source = before.events.at(-1).payload;
+      assert.equal(source.file, moved.observation.file);
+      for (const event of [verification, terminal]) {
+        assert.equal(event.payload.screenshot_path, source.screenshot_path);
+        assert.equal(event.payload.screenshot_sha256, source.screenshot_sha256);
+        assert.equal(event.payload.observed_at, moved.observation.observed_at);
+      }
+      assert.equal(record.events.length, before.events.length + 2);
+      assert.deepEqual(s.calls, [[1,2],[3,4]]);
+      assert.throws(() => s.collector.pending(), /closed/);
+      assert.throws(() => s.collector.finish({actionId:'1',outcome,result:'aborted'}), /closed/);
+      assert.throws(() => makeCollector({target:s.target,repo,db:s.db,run:'test',python,directory:s.dir}), /already terminal/);
+      // A new owner reaching the terminal-ledger guard also proves the old lock closed.
+    } finally { await rm(s.dir,{recursive:true,force:true}); }
+  }
+});
+
+test('finish validates outcome, result and matching action before consuming a frame', async () => {
+  const s = await setup();
+  try {
+    await s.collector.observe({emit:false});
+    await s.collector.move({actionId:'1',move:'e2e4',from:[1,2],to:[3,4]});
+    const count = exportFixture(s).events.length;
+    assert.throws(() => s.collector.finish({actionId:'1',outcome:'uncertain',result:'win'}), /conclusive/);
+    assert.throws(() => s.collector.finish({actionId:'1',outcome:'executed',result:'unknown'}), /terminal result/);
+    assert.throws(() => s.collector.finish({actionId:'wrong',outcome:'executed',result:'win'}), /pending action/);
+    assert.equal(exportFixture(s).events.length, count);
+    assert.equal(s.collector.pending(), '1');
+    s.collector.finish({actionId:'1',outcome:'executed',result:'win'});
+  } finally { await rm(s.dir,{recursive:true,force:true}); }
+});
+
+test('finish preserves fresh-observation and halted-run guards', async () => {
+  const s = await setup();
+  try {
+    const ending = {actionId:'1',outcome:'executed',result:'draw'};
+    assert.throws(() => s.collector.finish(ending), /Observe/);
+    await s.collector.observe({emit:false});
+    await s.collector.move({actionId:'1',move:'e2e4',from:[1,2],to:[3,4]});
+    s.collector.verify({actionId:'1',outcome:'uncertain'});
+    assert.throws(() => s.collector.finish(ending), /Observe/);
+    await s.collector.observe({emit:false});
+    s.collector.halt({reason:'synthetic stop'});
+    assert.throws(() => s.collector.finish(ending), /closed/);
+    const restarted = makeCollector({target:s.target,repo,db:s.db,run:'test',python,directory:s.dir});
+    await restarted.observe({emit:false});
+    assert.throws(() => restarted.finish(ending), /stopped/);
+    assert.equal(restarted.pending(), '1');
+    assert.equal(exportFixture(s).events.filter(e => e.kind === 'terminal').length, 0);
+    restarted.close();
+  } finally { await rm(s.dir,{recursive:true,force:true}); }
+});
+
+test('finish cannot interleave with a native sequence', async () => {
+  const s = await setup();
+  let release;
+  try {
+    const originalClick = s.target.click;
+    s.target.click = async point => {
+      await new Promise(resolve => { release = resolve; });
+      s.target.click = originalClick;
+      await originalClick(point);
+    };
+    await s.collector.observe({emit:false});
+    const moving = s.collector.move({actionId:'1',move:'e2e4',from:[1,2],to:[3,4]});
+    while (!release) await new Promise(resolve => setImmediate(resolve));
+    assert.throws(() => s.collector.finish({actionId:'1',outcome:'executed',result:'win'}), /in flight/);
+    assert.equal(exportFixture(s).events.filter(e => e.kind === 'verification').length, 0);
+    release();
+    await moving;
+    s.collector.finish({actionId:'1',outcome:'executed',result:'win'});
+  } finally { if (release) release(); await rm(s.dir,{recursive:true,force:true}); }
+});
+
+test('finish rejects changed source bytes before verification', async () => {
+  const s = await setup();
+  try {
+    await s.collector.observe({emit:false});
+    const moved = await s.collector.move({actionId:'1',move:'e2e4',from:[1,2],to:[3,4]});
+    await writeFile(moved.observation.file, 'changed synthetic image');
+    assert.throws(() => s.collector.finish({actionId:'1',outcome:'executed',result:'win'}), /artifact changed/);
+    assert.equal(s.collector.pending(), '1');
+    assert.equal(exportFixture(s).events.filter(e => ['verification','terminal'].includes(e.kind)).length, 0);
+  } finally { await rm(s.dir,{recursive:true,force:true}); }
+});
+
+test('finish exposes a terminal append failure after preserving the verification', async () => {
+  const s = await setup();
+  try {
+    s.collector.close();
+    const wrapper = join(s.dir, 'fail-terminal.py');
+    const executable = execFileSync(python, ['-c','import sys; print(sys.executable)'], {encoding:'utf8'}).trim();
+    await writeFile(wrapper, `#!${executable}\nimport subprocess, sys\nif 'append' in sys.argv and 'terminal' in sys.argv:\n    sys.exit('synthetic terminal append failure')\nsys.exit(subprocess.run([${JSON.stringify(executable)}, *sys.argv[1:]], input=sys.stdin.buffer.read()).returncode)\n`, {mode:0o700});
+    s.collector = makeCollector({target:s.target,repo,db:s.db,run:'test',python:wrapper,directory:s.dir});
+    await s.collector.observe({emit:false});
+    await s.collector.move({actionId:'1',move:'e2e4',from:[1,2],to:[3,4]});
+    assert.throws(() => s.collector.finish({actionId:'1',outcome:'executed',result:'win'}), /synthetic terminal append failure/);
+    const record = exportFixture(s);
+    assert.equal(record.events.at(-1).kind, 'verification');
+    assert.equal(record.events.filter(e => e.kind === 'terminal').length, 0);
+    assert.equal(s.collector.pending(), null);
+    assert.throws(() => s.collector.finish({actionId:'1',outcome:'executed',result:'win'}), /Observe/);
+    assert.throws(() => makeCollector({target:s.target,repo,db:s.db,run:'test',python,directory:s.dir}), /EEXIST/);
+    s.collector.close();
+  } finally { await rm(s.dir,{recursive:true,force:true}); }
+});
