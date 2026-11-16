@@ -1,8 +1,11 @@
 # Codex Chess Lab
 
 A research workspace for measuring chess decisions and browser reliability separately.
-The scientific contract is [RESEARCH_PLAN.md](RESEARCH_PLAN.md). A functioning
-collector or a bot win is not a strength estimate.
+The original scientific contract is [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The
+prospective [V2 research plan](RESEARCH_PLAN_V2.md) and [copyable V2 goal
+prompt](GOAL_PROMPT_V2.md) define the next controlled-strength and improvement
+study. V2 starts only when its goal is explicitly invoked. A functioning collector
+or a bot win is not a strength estimate.
 
 ## Quick start
 
@@ -62,9 +65,9 @@ operator who owns the database. Evidence hashes require independent file readbac
 ## Research integrity
 
 Use `purpose=feasibility` for integration runs. Pilot and held-out comparisons need
-fresh, isolated player contexts and audited tool access. Engines and PGN libraries
-belong in a separate post-game evaluator. Never supply evaluation answers to the
-unaided player. Engine-assisted play is its own condition.
+fresh, isolated player contexts and audited tool access. Keep opponent mechanics
+and post-game evaluation separate from the unaided player. Never supply evaluation
+answers to that player. Player-facing engine assistance is its own condition.
 
 Raw screenshots, account state, permission records and study results stay local.
 The requested source PR workflow does not authorize public research publication

@@ -1,9 +1,12 @@
 # Operating this research repository
 
-Read RESEARCH_PLAN.md for scope, docs/milestones.md for acceptance evidence, and
-docs/protocol.md before collecting experimental data. Confirm the live worktree
-and private checkpoint before resuming a game; a recorded intent is not proof of
-execution. Inspect the screen before retrying any uncertain click.
+For an explicitly requested V2 study, read RESEARCH_PLAN_V2.md for scope, milestone
+acceptance and completion; preserve the V1 specification and evidence. For V1,
+read RESEARCH_PLAN.md, docs/milestones.md and docs/protocol.md. Shared collection
+mechanics below apply to both; V2 scientific settings come from its frozen protocol.
+Confirm the live worktree and private checkpoint before resuming a game; a recorded
+intent is not proof of execution. Inspect the screen before retrying any uncertain
+click.
 
 Run `.venv/bin/python -m unittest discover -s tests -v` after collector or evaluator
 changes, using the environment with `requirements-corpus.txt` installed. A bare
