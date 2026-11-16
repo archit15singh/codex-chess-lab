@@ -84,7 +84,7 @@ class DiagnosticCorpusTests(unittest.TestCase):
             pixels = pymupdf.Pixmap(a)
             self.assertEqual(pixels.pixel(10, 10), (23, 34, 30),
                              'board must stay inset rather than overwrite/crop at canvas origin')
-            self.assertEqual(pixels.width, 512 if style == 'compact' else 760)
+            self.assertEqual(pixels.width, {'compact': 512, 'lowres': 256}.get(style, 760))
             scale = pixels.width / 760
             self.assertNotEqual(pixels.pixel(round(600 * scale), round(380 * scale)), (23, 34, 30),
                                 'SVG internal viewBox must scale to the declared board extent')

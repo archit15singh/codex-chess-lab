@@ -79,8 +79,11 @@ treatment may receive a prospectively selected attachment from that truth; an
 unaided condition may not. Current-state transcripts and validated history have
 different information benefits and must remain separately labelled.
 
-`plain`, `compact`, `angled` and `clutter` are deterministic vector renderings.
-Compact reduces pixel resolution; angled rotates the board seven degrees;
+`plain`, `compact`, `lowres`, `angled` and `clutter` are deterministic vector renderings.
+Compact uses a 512-pixel canvas and lowres uses 256 pixels, giving a board about
+323 and 162 pixels wide respectively. The other canvases remain 760 pixels with
+a 480-pixel board. Lowres is a separate prospective challenge; existing styles
+retain their bytes. Angled rotates the board seven degrees;
 clutter uses a second board theme and surrounding UI panels that cover no board
 squares. All omit last-move, check and arrow hints. These transformations create
 challenge distributions, not a guarantee that a model will make errors. Inspect

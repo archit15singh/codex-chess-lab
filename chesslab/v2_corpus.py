@@ -16,7 +16,7 @@ import chess.svg
 
 SPLITS = {'pilot', 'training', 'development', 'final'}
 TASKS = {'perception', 'history', 'correction', 'move'}
-STYLES = {'plain', 'compact', 'angled', 'clutter'}
+STYLES = {'plain', 'compact', 'lowres', 'angled', 'clutter'}
 BASE = {'id', 'family', 'split', 'task', 'moves', 'orientation', 'style'}
 
 
@@ -162,7 +162,7 @@ def render(board, orientation, style):
            f'{panels}<g transform="rotate({angle} 380 380)"><g transform="translate(140 140) scale({board_scale})">'
            f'{content}</g></g><text x="40" y="710" fill="#afc0b5" font-size="16" font-family="sans-serif">'
            f'{escape("White" if facing else "Black")} at bottom</text></svg>').encode()
-    pixels = 512 if style == 'compact' else 760
+    pixels = {'compact': 512, 'lowres': 256}.get(style, 760)
     with pymupdf.open(stream=svg, filetype='svg') as doc:
         png = doc[0].get_pixmap(matrix=pymupdf.Matrix(pixels / 760, pixels / 760), alpha=False).tobytes('png')
     return png, digest(svg)
