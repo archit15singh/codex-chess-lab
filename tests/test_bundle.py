@@ -181,6 +181,24 @@ class BundleTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'regular'):
             bundle.verify_tree(target)
 
+    @unittest.skipIf(os.name != 'posix' or os.geteuid() == 0,
+                     'requires POSIX directory permissions for a non-root user')
+    def test_extracted_readback_rejects_unreadable_directories(self):
+        self.build()
+        target = self.root / 'unreadable-entry'
+        bundle.extract(self.archive, target)
+        hidden = target / 'unreadable'
+        hidden.mkdir()
+        (hidden / 'unexpected.txt').write_bytes(b'unexpected payload')
+        hidden.chmod(0)
+        try:
+            with self.assertRaises(PermissionError):
+                list(hidden.iterdir())
+            with self.assertRaises(PermissionError):
+                bundle.verify_tree(target)
+        finally:
+            hidden.chmod(0o700)
+
     def test_cli_build_verify_extract_and_readback(self):
         allowlist = self.root / 'reviewed-files.json'
         allowlist.write_text(json.dumps(self.files))

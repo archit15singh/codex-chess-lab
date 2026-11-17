@@ -6,7 +6,8 @@ payload's SHA-256 and byte count. Extraction checks the entire archive first,
 creates a new directory and checks the copied bytes again. `verify-tree` reads
 back the extracted files and rejects altered, additional or symlinked files.
 Directories may provide hierarchy; other nonregular entries, such as FIFOs and
-sockets, are rejected.
+sockets, are rejected. Directory-enumeration errors stop verification; unreadable
+subdirectories are not silently skipped.
 
 Prepare a staging directory containing the analysis code, permitted input data,
 environment requirements, report/figures, export-scope notes and a README with the

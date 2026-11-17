@@ -6,6 +6,7 @@ The operator reviews/stages the export and provides its expected source hashes.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import stat
@@ -192,14 +193,20 @@ def verify_tree(directory, *, max_bytes=MAX_BYTES):
     _require(manifest_path.stat().st_size <= MAX_MANIFEST_BYTES, 'bounded success manifest required')
     manifest = _manifest(manifest_path.read_bytes())
     actual = set()
-    for path in root.rglob('*'):
-        mode = path.lstat().st_mode
-        _require(not stat.S_ISLNK(mode), 'extracted symlinks are not permitted')
-        _require(stat.S_ISREG(mode) or stat.S_ISDIR(mode),
-                 'extracted entries must be regular files or directories')
-        if stat.S_ISREG(mode):
-            actual.add(str(path.relative_to(root)))
-            _require(len(actual) <= MAX_FILES, 'extracted inventory exceeds file allowance')
+
+    def enumeration_error(error):
+        raise error
+
+    for directory, directories, files in os.walk(root, onerror=enumeration_error, followlinks=False):
+        for name in directories + files:
+            path = Path(directory) / name
+            mode = path.lstat().st_mode
+            _require(not stat.S_ISLNK(mode), 'extracted symlinks are not permitted')
+            _require(stat.S_ISREG(mode) or stat.S_ISDIR(mode),
+                     'extracted entries must be regular files or directories')
+            if stat.S_ISREG(mode):
+                actual.add(str(path.relative_to(root)))
+                _require(len(actual) <= MAX_FILES, 'extracted inventory exceeds file allowance')
     _require(actual == set(manifest['files']) | {MANIFEST}, 'extracted file inventory differs from manifest')
     _require(sum(r['bytes'] for r in manifest['files'].values()) <= max_bytes, 'expanded payload exceeds byte allowance')
     for name, record in manifest['files'].items():
