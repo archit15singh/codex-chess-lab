@@ -1,6 +1,6 @@
 # Duolingo 1200: chess performance, component diagnostics and improvement
 
-Prospective follow-up specification, version 0.1, 2026-11-18. The user explicitly
+Prospective follow-up specification, version 0.2, 2026-11-18. The user explicitly
 started the [goal](GOAL_PROMPT_DUOLINGO_1200.md). This document does not assert that
 any game, rating gain or experiment has occurred. Preserve V1 and the stopped V2
 study; neither supplies final outcomes for this study or resumes automatically.
@@ -60,6 +60,12 @@ within-game context. It receives no reconstructed board state, legal move list,
 engine output, opening lookup, earlier experimental game or learned policy.
 Candidate, sham, state, history and search arms declare their additional inputs.
 Evaluator and policy-development contexts stay separate from live players.
+Every diagnostic arm and replicate starts in its own fresh independent context,
+receiving only that arm's frozen inputs. Randomize arm order and assignment to
+fresh context slots within each matched item. Seal every response before
+returning any paired-arm output, reference label or feedback to another context.
+History supplied within one assigned arm is distinct from context shared across
+arms. Record actual context identities and audit these boundaries.
 
 Record the actual host instructions and available tools as well as tools used;
 procedural isolation is not an OS sandbox. Audit original host traces, including
@@ -77,7 +83,7 @@ changes prospectively and disclose their affected roles and phases.
 ## Bounded design
 
 Initial ceilings for this independently requested follow-up are **48 initiated
-games, 104 diagnostic player assignments, 2,880 live move attempts and three new
+games, 102 diagnostic player assignments, 2,880 live move attempts and three new
 candidate policies in one cycle**. Every attempted, incomplete and invalid run
 counts; no reset, replacement or refund. Preserve earlier study ledgers and record
 both study-specific and cumulative project use. These ceilings do not alter or
@@ -88,13 +94,19 @@ hard limit requires an explicit prospective amendment, not a new run ID.
 Allocation, subject to pilot feasibility and a recorded freeze before final data:
 
 - Six training games, including at most two integration pilots.
-- Six development games, two per candidate; select at most one candidate.
+- Six development games; freeze the candidate count before development and
+  assign these six slots in candidate-index round-robin order. One, two or three
+  candidates receive six, three or two games each. Select at most one candidate.
 - Thirty-six final games: twelve baseline, twelve sham and twelve selected-policy
   games, assigned in twelve randomized blocks of three.
 - Six diagnostic pilots, excluded from final estimates.
-- Ninety-eight final diagnostic assignments: eight matched pairs for each of
-  perception, memory, reasoning, search and legality feedback (80 assignments),
-  plus six matched baseline/sham/candidate triples (18 assignments).
+- Ninety-six final diagnostic assignments: six matched pairs for each of
+  perception, memory, reasoning, search and legality feedback (60 assignments),
+  plus twelve matched baseline/sham/candidate triples (36 assignments).
+
+This allocation prioritizes the primary improvement comparison over descriptive
+component precision. It was revised during plan review, before any pilot or final
+response; the six-item improvement design had very coarse exact-test resolution.
 
 Before final collection, freeze model/prompts, seeds and ordered assignments,
 permitted modes, source-game sampling, scoring, references, deadlines, missingness,
@@ -108,7 +120,11 @@ ratings, mode and time controls when visible; report adaptive opponents, repeate
 opponents, account carryover and temporal effects. The final game comparisons are
 exploratory; a rating trajectory alone is not a causal improvement estimate.
 
-Reserve diagnostic source games by final-game slot before collection. Use a
+Reserve twelve distinct diagnostic source games by final-game slot before
+collection. Each component's six matched pairs use six distinct source games;
+the twelve improvement triples use all twelve distinct source games. A source
+game is the inferential unit, with its arms kept together; positions or moves
+from the same game never become additional independent units. Use a
 deterministic, outcome-independent rule for positions and historical questions,
 frozen before their responses. Developers cannot inspect final games or reserved
 tasks. Validate board/history labels using visible records and independent legal
@@ -135,9 +151,11 @@ arms. Existing host resources are the default; paid additions need approval.
 
 ## Improvement, inference and missing data
 
-Classify only training failures. Propose at most three policies of at most 120
-words, changing one declared mechanism each. Test each on its assigned two
-development games. Select by highest assigned-game score, then fewer invalid
+Classify only training failures. Propose one to three policies of at most 120
+words, including revisions, changing one declared mechanism each. Freeze all
+policies and their count before the six development slots. Test each on its
+assigned round-robin slots, with no outcome-based reallocation. Select by highest
+assigned-game score proportion, then fewer invalid
 decisions, then lower total decision latency, then candidate index. Preserve
 every unsuccessful policy. Freeze baseline, selected policy and a sham with
 matched extra context length before final games. Do not tune or reselect after
@@ -150,17 +168,20 @@ side-to-move convention, mate handling and finite-reference stability rule befor
 collection. Missing, late, malformed, contaminated or unscorable items receive
 zero primary success, with their reasons and sensitivity bounds also reported.
 
-Promotion requires selected-policy gains of at least one success out of six
+Promotion requires selected-policy gains of at least two successes out of twelve
 against both baseline and sham, both one-sided exact paired tests passing Holm
 at family level 0.05, completion no worse than baseline, and median assigned-item
-latency at most 1.5 times baseline. All six costs must be known and nonnegative;
-unknown cost fails promotion. Specify inclusive exact tails and discrete ties in
-the frozen executable analysis. A failed criterion rejects promotion.
+latency at most 1.5 times baseline. All twelve costs per arm must be known and
+nonnegative, and the baseline median must be positive; unknown cost fails
+promotion. Use source-game paired binary differences and inclusive exact tails;
+retain zero differences as ties in the accounting. Specify the randomization
+reference and discrete ties in the frozen executable analysis. A failed criterion
+rejects promotion.
 
 Report live W/D/L, assigned-game score, completion and rating trajectory, keeping
 pilot/development separate. For component contrasts, report all assigned items,
 paired effects, source-game clustering, missingness and bounded uncertainty.
-Eight or six source games give weak precision; bootstrap percentiles are
+Twelve or six source games give weak precision; bootstrap percentiles are
 descriptive sensitivity summaries, not automatically validated confidence
 intervals. Source games shared across dimensions are dependent. Multiplicity for
 the two confirmatory improvement tests is separate from descriptive component
