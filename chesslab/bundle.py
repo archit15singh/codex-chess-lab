@@ -185,7 +185,7 @@ def extract(path, destination, *, max_bytes=MAX_BYTES):
 
 
 def verify_tree(directory, *, max_bytes=MAX_BYTES):
-    """Read back the extracted payload, including unexpected files and symlinks."""
+    """Read back the payload and reject unexpected or nonregular entries."""
     _require(type(max_bytes) is int and max_bytes > 0, 'positive byte allowance required')
     root = Path(directory).resolve(strict=True)
     manifest_path = _source(root, MANIFEST)
@@ -193,8 +193,11 @@ def verify_tree(directory, *, max_bytes=MAX_BYTES):
     manifest = _manifest(manifest_path.read_bytes())
     actual = set()
     for path in root.rglob('*'):
-        _require(not path.is_symlink(), 'extracted symlinks are not permitted')
-        if path.is_file():
+        mode = path.lstat().st_mode
+        _require(not stat.S_ISLNK(mode), 'extracted symlinks are not permitted')
+        _require(stat.S_ISREG(mode) or stat.S_ISDIR(mode),
+                 'extracted entries must be regular files or directories')
+        if stat.S_ISREG(mode):
             actual.add(str(path.relative_to(root)))
             _require(len(actual) <= MAX_FILES, 'extracted inventory exceeds file allowance')
     _require(actual == set(manifest['files']) | {MANIFEST}, 'extracted file inventory differs from manifest')

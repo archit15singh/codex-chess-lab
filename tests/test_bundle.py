@@ -172,6 +172,15 @@ class BundleTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 bundle.verify_tree(target)
 
+    @unittest.skipUnless(hasattr(os, 'mkfifo'), 'requires POSIX FIFO support')
+    def test_extracted_readback_rejects_nonregular_entries(self):
+        self.build()
+        target = self.root / 'special-entry'
+        bundle.extract(self.archive, target)
+        os.mkfifo(target / 'unexpected-channel')
+        with self.assertRaisesRegex(ValueError, 'regular'):
+            bundle.verify_tree(target)
+
     def test_cli_build_verify_extract_and_readback(self):
         allowlist = self.root / 'reviewed-files.json'
         allowlist.write_text(json.dumps(self.files))
