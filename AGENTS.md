@@ -1,5 +1,10 @@
 # Operating this research repository
 
+For the Duolingo 1200 paper goal, read RESEARCH_PLAN_DUOLINGO_1200.md and its
+private task checkpoint. Keep its protocol, ledgers and player contexts separate
+from stopped studies. Scientific dispatch follows the model/effort assignment in
+its reviewed frozen protocol; engineering agents inherit their host defaults.
+
 For an explicitly requested V2 study, read RESEARCH_PLAN_V2.md for scope, milestone
 acceptance and completion; preserve the V1 specification and evidence. For V1,
 read RESEARCH_PLAN.md, docs/milestones.md and docs/protocol.md. Shared collection
