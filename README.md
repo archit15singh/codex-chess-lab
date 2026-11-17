@@ -1,6 +1,10 @@
 # Codex Chess Lab
 
 A research workspace for measuring chess decisions and browser reliability separately.
+The [Duolingo 1200 paper plan](RESEARCH_PLAN_DUOLINGO_1200.md) and
+[100-word goal prompt](GOAL_PROMPT_DUOLINGO_1200.md) define a separate follow-up
+covering perception, memory, reasoning, search, self-improvement and interaction
+reliability. A displayed rating target is distinct from a calibrated strength claim.
 The original scientific contract is [RESEARCH_PLAN.md](RESEARCH_PLAN.md). The
 prospective [V2 research plan](RESEARCH_PLAN_V2.md) and [copyable V2 goal
 prompt](GOAL_PROMPT_V2.md) define the next controlled-strength and improvement
