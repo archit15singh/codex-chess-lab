@@ -1,0 +1,21 @@
+{
+  "maxPlies": 180,
+  "players": {
+    "white": {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "endpoint": "ws://127.0.0.1:9225/devtools/browser/00000000-0000-4000-8000-000000000001",
+      "url": "https://www.duolingo.com/",
+      "view": { "x": 120, "y": 40, "width": 660, "height": 740 },
+      "board": { "x": 150, "y": 120, "width": 600, "height": 600 }
+    },
+    "black": {
+      "provider": "openai",
+      "model": "gpt-5.3-codex",
+      "endpoint": "ws://127.0.0.1:9226/devtools/browser/00000000-0000-4000-8000-000000000002",
+      "url": "https://www.duolingo.com/",
+      "view": { "x": 120, "y": 40, "width": 660, "height": 740 },
+      "board": { "x": 150, "y": 120, "width": 600, "height": 600 }
+    }
+  }
+}

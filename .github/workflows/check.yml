@@ -15,5 +15,7 @@ jobs:
           node-version: '24'
       - run: python -m pip install -r requirements-corpus.txt
       - run: node --test tests/browser_collector.test.mjs
+      - run: npm --prefix scripts/friend-match ci --ignore-scripts
+      - run: npm --prefix scripts/friend-match test
       - run: python -m unittest discover -s tests -v
       - run: python -m compileall -q chesslab

@@ -51,6 +51,7 @@ python3.13 -m venv .venv
 - [Protocol](docs/protocol.md): experimental controls, budgets and analysis.
 - [Architecture](docs/architecture.md): small modules and evidence boundaries.
 - [Native collector](docs/browser-collector.md): screenshot and guarded-click workflow.
+- [Claude vs Codex friend match](docs/friend-match.md) for screenshot-based play across two Brave profiles.
 - [Evaluator](docs/evaluator.md): strict PGN and optional bounded Stockfish analysis.
 - [Paired analysis](docs/paired-analysis.md): family-level comparisons and missing-score coverage.
 - [Study contrasts](docs/study-analysis.md): declared nine-arm comparisons and state-by-legality interaction.

@@ -1,0 +1,11 @@
+{
+  "name": "chesslab-friend-match",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test match.test.mjs" },
+  "dependencies": {
+    "playwright-core": "1.61.1",
+    "pngjs": "7.0.0"
+  }
+}

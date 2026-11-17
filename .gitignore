@@ -8,3 +8,5 @@ artifacts/*
 output/
 
 docs/platform-permission.md
+
+/scripts/friend-match/node_modules/
